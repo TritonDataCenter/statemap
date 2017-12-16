@@ -1,0 +1,646 @@
+#!/usr/bin/env node
+
+/*
+ * Copyright 2017, Joyent, Inc.
+ */
+
+var mod_fs = require('fs');
+var mod_path = require('path');
+var mod_util = require('util');
+var mod_extsprintf = require('extsprintf');
+var mod_color = require('color');
+var mod_dashdash = require('dashdash');
+
+var fatal = function ()
+{
+	var c = mod_path.basename(process.argv[1]);
+	var args = Array.prototype.slice.call(arguments);
+
+	var msg = mod_extsprintf.sprintf.apply(this, args);
+	console.error(c + ': ' + msg);
+
+	process.exit(1);
+};
+
+var check = function (input, field)
+{
+	if (input.hasOwnProperty(field))
+		return;
+
+	fatal('expected property "%s"', field);
+};
+
+var out = function ()
+{
+	var args = Array.prototype.slice.call(arguments);
+	var msg = mod_extsprintf.sprintf.apply(this, args);
+
+	console.log(msg);
+};
+
+var rectWidth = function (map, index, config)
+{
+	var etime;
+
+	if (index + 1 < map.length) {
+		etime = map[index + 1].time;
+	} else {
+		etime = config.begin + config.timeWidth;
+	}
+
+	return (((etime - map[index].time) / config.timeWidth) *
+	    config.pixelWidth);
+};
+
+var stateColors = function (states)
+{
+	var defaults = {
+		'on-cpu': 'seagreen',
+		'off-cpu-waiting': '#f9f9f9',
+		'off-cpu-futex': 'white',
+		'off-cpu-blocked': 'orangered',
+		'off-cpu-io': 'goldenrod',
+		'off-cpu-dead': '#303030'
+	};
+
+	for (var state in states) {
+		var color = states[state].color;
+
+		if (!color)
+			color = defaults[states[state].name];
+
+		if (!color) {
+			states[state].color = mod_color.rgb([
+			    Math.floor(Math.random() * 255),
+			    Math.floor(Math.random() * 255),
+			    Math.floor(Math.random() * 255) ]);
+			continue;
+		}
+
+		try {
+			states[state].color = mod_color(color);
+		} catch (err)  {
+			fatal('illegal color "%s" for state "%s"',
+			    color, state);
+		}
+	}
+};
+
+var outputMap = function (map, config)
+{
+	var i;
+
+	out('<g><title>Entity %s</title>', config.entity);
+
+	for (i = 0; i < map.length; i++) {
+		var w = rectWidth(map, i, config);
+		var datum = map[i];
+		var state = datum.state;
+		var x, color;
+
+		if (w === 0)
+			continue;
+
+		x = (((datum.time - config.begin) /
+		    config.timeWidth) * config.pixelWidth);
+
+		if (!config.coalesce || w >= config.coalesceThreshold) {
+			out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
+			    'height="%d" onclick="mapclick(evt, ' +
+			    mod_util.inspect(datum) + ')" style="fill:%s" />',
+			    config.y,
+			    config.stripHeight, config.states[state].color);
+			continue;
+		}
+
+		/*
+		 * If our width is less than our coalesce threshold, search
+		 * forward in states until we reach the threshold.
+		 */
+		var widths = {};
+
+		widths[state] = w;
+
+		while (w < config.coalesceThreshold && i + 1 < map.length) {
+			var nextw = rectWidth(map, i + 1, config);
+
+			if (nextw > config.coalesceThreshold)
+				break;
+
+			/*
+			 * Our next width is also less than our coalesce
+			 * threshold.  Add to our total width, increase i,
+			 * and keep track of how much time we are in which
+			 * state.
+			 */
+			w += nextw;
+
+			if (!widths[map[i + 1].state])
+				widths[map[i + 1].state] = 0;
+
+			widths[map[i + 1].state] += nextw;
+			config.coalesced++;
+			i++;
+		}
+
+		var max = state;
+
+		for (state in widths) {
+			if (widths[state] > widths[max])
+				max = state;
+		}
+
+		color = config.states[max].color;
+
+		var d = {
+			time: datum.time,
+			etime: i + 1 < map.length ? map[i + 1].time :
+			    config.begin + config.timeWidth,
+			states: []
+		};
+
+		for (state in widths) {
+			d.states[state] = widths[state] / w;
+
+			if (state == max)
+				continue;
+
+			color = color.mix(config.states[state].color,
+			    widths[state] / w);
+		}
+
+		out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
+		    'height="%d" onclick="mapclick(evt, ' +
+		    mod_util.inspect(d) + ')" style="fill:%s" />', config.y,
+		    config.stripHeight, color);
+	}
+
+	out('</g>');
+};
+
+var loadLibs = function (config)
+{
+	var css = [], defs = [];
+	var lib, text;
+	var i;
+
+	out('<defs>');
+	out('  <script type="application/ecmascript"><![CDATA[');
+
+	out('var globals = %s;', mod_util.inspect(config));
+
+	for (i = 0; i < config.libs.length; i++) {
+		var components;
+
+		try {
+			lib = require.resolve('../lib/' + config.libs[i]);
+			text = mod_fs.readFileSync(lib, 'utf8');
+		} catch (err) {
+			fatal('couldn\'t load library %s: %s', lib, err);
+		}
+
+		out('%s', text);
+
+		components = lib.split('.');
+
+		if (components.length > 1)
+			components.pop();
+
+		components.push('css');
+		css.push(components.join('.'));
+
+		components.pop();
+		components.push('defs');
+		defs.push(components.join('.'));
+	}
+
+	out('  ]]></script>');
+
+	out('  <style type="text/css"><![CDATA[');
+
+	for (i = 0; i < css.length; i++) {
+		try {
+			mod_fs.statSync(css[i]);
+		} catch (err) {
+			continue;
+		}
+
+		try {
+			text = mod_fs.readFileSync(css[i], 'utf8');
+		} catch (err) {
+			fatal('couldn\'t load CSS file %s: %s', css[i], err);
+		}
+
+		out('%s', text);
+	}
+
+	out('  ]]></style>');
+
+	for (i = 0; i < defs.length; i++) {
+		try {
+			mod_fs.statSync(defs[i]);
+		} catch (err) {
+			continue;
+		}
+
+		try {
+			text = mod_fs.readFileSync(defs[i], 'utf8');
+		} catch (err) {
+			fatal('couldn\'t load SVG definition file %s: %s',
+			    defs[i], err);
+		}
+
+		out('%s', text);
+	}
+
+	out('</defs>');
+};
+
+var outputControls = function ()
+{
+	out('<circle cx="50" cy="50" r="42" fill="white" opacity="0.75"/>');
+	out('<path class="button" onclick="pan(0,50)"');
+	out('    d="M50 10 l12 20 a40,70 0 0,0 -24,0z" />');
+	out('<path class="button" onclick="pan(50,0)"');
+	out('    d="M10 50 l20 -12 a70,40 0 0,0 0,24z" />');
+	out('<path class="button" onclick="pan(0,-50)"');
+	out('    d="M50 90 l12 -20 a40,70 0 0,1 -24,0z" />');
+
+	out('<path class="button" onclick="pan(-50,0)"');
+	out('    d="M90 50 l-20 -12 a70,40 0 0,1 0,24z" />');
+
+	out('<circle class="compass" cx="50" cy="50" r="20"/>');
+	out('<circle class="button"  cx="50" cy="41" r="8"');
+	out('    onclick="zoom(0.8)"/>');
+	out('<circle class="button"  cx="50" cy="59" r="8"');
+	out('    onclick="zoom(1.25)"/>');
+
+	out('<rect class="plus-minus" x="46" y="39.5"');
+	    out('width="8" height="3"/>');
+
+	out('<rect class="plus-minus" x="46" y="57.5"');
+	    out('width="8" height="3"/>');
+
+	out('<rect class="plus-minus" x="48.5" y="55"');
+	    out('width="3" height="8"/>');
+};
+
+var outputLegend = function (config)
+{
+	var x = 20;
+	var y = config.controlHeight + config.tmargin;
+	var height = 15;
+	var width = config.lmargin - (2 * x);
+	var states = config.states;
+
+	for (var state in states) {
+		out('<rect x="%d" y="%d" width="%d" height="%d" ' +
+		    'class="statemap-legend" style="fill:%s" />',
+		    x, y, width, height, states[state].color);
+		y += height + 10;
+
+		out('<text x="%d" y="%d" class="statemap-legendlabel ' +
+		    'sansserif">%s</text>', x + (width / 2), y,
+		    states[state].name);
+		y += 15;
+
+	}
+};
+
+var statemap = function (config, input)
+{
+	var maps = {}, events = {}, states = {};
+	var latest, data, datum;
+	var state, value;
+	var i, j;
+	var what;
+
+	if (!config.hasOwnProperty('begin'))
+		config.begin = 0;
+
+	if (!config.hasOwnProperty('end'))
+		config.end = 0;
+
+	var sortby = 'on-cpu';
+
+	check(input, 'data');
+	check(input, 'states');
+
+	data = input.data;
+
+	if (input.title)
+		config.title = input.title;
+
+	for (state in input.states) {
+		if (input.states[state].hasOwnProperty('value')) {
+			value = input.states[state].value;
+		} else {
+			value = state;
+		}
+
+		states[value] = input.states[state];
+		states[value].name = state;
+	}
+
+	stateColors(states);
+
+	for (i = 0; i < data.length; i++) {
+		datum = data[i];
+
+		/*
+		 * We permit entirely empty datum objects.
+		 */
+		if (Object.keys(datum).length === 0)
+			continue;
+
+		if (!datum.entity)
+			fatal('input.data[%d] missing "entity" field', i);
+
+		if (!datum.time)
+			fatal('input.data[%d] missing "time" field', i);
+
+		datum.time = parseInt(datum.time, 10);
+
+		if (datum.time < config.begin ||
+		    (config.end && datum.time > config.end))
+			continue;
+
+		latest = datum;
+
+		if (datum.event) {
+			what = events;
+		} else if (datum.hasOwnProperty('state')) {
+			what = maps;
+
+			if (!states[datum.state]) {
+				fatal('input.data[%d] has unknown state %s',
+				    i, datum.state);
+			}
+		} else {
+			fatal('input.data[%d] is neither an event nor a ' +
+			    'state transition', i);
+		}
+
+		if (!what[datum.entity]) {
+			what[datum.entity] = [ datum ];
+		} else {
+			what[datum.entity].push(datum);
+		}
+	}
+
+	var timeWidth = latest.time - config.begin;
+
+	var keys = Object.keys(maps);
+	var weight = {};
+	var all = undefined;
+
+	if (config.autocoalesceTarget)
+		all = [];
+
+	for (i = 0; i < keys.length; i++) {
+		var key = keys[i];
+		weight[key] = 0;
+
+		for (j = 0; j < maps[key].length; j++) {
+			var etime = j < maps[key].length - 1 ?
+			    maps[key][j + 1].time : timeWidth + config.begin;
+
+			datum = maps[key][j];
+
+			if (states[datum.state].name == sortby)
+				weight[key] += etime - datum.time;
+
+			if (all)
+				all.push(etime - datum.time);
+		}
+	}
+
+	keys.sort(function (lhs, rhs) {
+		if (weight[lhs] < weight[rhs])
+			return (1);
+
+		if (weight[lhs] > weight[rhs])
+			return (-1);
+
+		return (0);
+	});
+
+	var lmargin = 125, tmargin = 60;
+	var controlHeight = 175;
+
+	var height = (keys.length * config.stripHeight) + tmargin;
+	var width = config.stripWidth;
+
+	out('<?xml version="1.0"?>');
+	out('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"');
+	out('"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">');
+	out('<svg width="%d" height="%d"', width, height);
+	out('  xmlns="http://www.w3.org/2000/svg"');
+	out('  version="1.1"');
+	out('  onload="init(evt)">');
+
+	config.pixelWidth = width - lmargin;
+	config.pixelHeight = height - tmargin;
+	config.timeWidth = timeWidth;
+	config.states = states;
+	config.y = 0;
+	config.lmargin = lmargin;
+	config.tmargin = tmargin;
+	config.controlHeight = controlHeight;
+
+	if (all && all.length > config.autocoalesceTarget) {
+		var targ = config.autocoalesceTarget;
+		var thresh;
+
+		all.sort(function (lhs, rhs) {
+			if (lhs < rhs)
+				return (1);
+
+			if (lhs > rhs)
+				return (-1);
+
+			return (0);
+		});
+
+		thresh = (all[targ] / config.timeWidth) * config.pixelWidth;
+
+		if (thresh < 1.0)
+			thresh = 1.0;
+
+		config.coalesceThreshold = thresh;
+		config.coalesce = true;
+	}
+
+	config.coalesced = 0;
+	loadLibs(config);
+
+	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
+	    lmargin, tmargin, config.pixelWidth, height - tmargin);
+
+	out('<g id="statemap" transform="matrix(1 0 0 1 0 0)">');
+
+	for (i = 0; i < keys.length; i++) {
+		config.entity = keys[i];
+		outputMap(maps[keys[i]], config);
+		config.y += config.stripHeight;
+	}
+
+	out('</g>');
+	out('</svg>');
+
+	/*
+	 * The border around our statemap.
+	 */
+	out('<polygon class="statemap-border" ');
+	out('  points="%d %d, %d %d, %d %d, %d %d"/>',
+	    lmargin, tmargin, lmargin + config.pixelWidth, tmargin,
+	    lmargin + config.pixelWidth, height, lmargin, height);
+
+	if (config.title) {
+		out('<text x="%d" y="%d" class="statemap-title sansserif"> ' +
+		    '%s</text>', lmargin +
+		    (config.pixelWidth / 2), 16, config.title);
+	}
+
+	out('<text x="%d" y="%d" class="statemap-timelabel sansserif" ' +
+	    'id="statemap-timelabel"></text>', lmargin +
+	    (config.pixelWidth / 2), 34);
+
+	out('<line x1="%d" y1="%d" x2="%d" y2="%d"', lmargin + 10, 40,
+	    lmargin + config.pixelWidth - 10, 40);
+	out('class="statemap-timeline" />');
+
+	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
+	    10, tmargin, lmargin, controlHeight);
+
+	outputControls();
+	out('</svg>');
+
+	outputLegend(config);
+
+	out('<!-- %j !-->', states);
+	out('<!-- coalesced: %d !-->', config.coalesced);
+	out('</svg>');
+};
+
+var parseOffset = function (option, optstr, arg)
+{
+	var re = /^(\d*\.?\d*)(ms|us|s|ns|sec|$)$/;
+	var match = re.exec(arg);
+	var mult = 1;
+	var units, val;
+
+	if (!match) {
+		throw (new Error(mod_util.format('value for "%s" is not a ' +
+		    'valid expression of time: "%s"', optstr, arg)));
+	}
+
+	units = match[2];
+
+	if (units == 's' || units == 'sec') {
+		mult = 1000000000;
+	} else if (units == 'ms') {
+		mult = 1000000;
+	} else if (units == 'us') {
+		mult = 1000;
+	}
+
+	val = parseFloat(match[1]);
+
+	if (mult == 1 && Math.floor(val) != val) {
+		throw (new Error(mod_util.format('value for "%s" must be an ' +
+		    'integer when in nanoseconds', optstr)));
+	}
+
+	return (Math.floor(parseFloat(match[1]) * mult));
+};
+
+var main = function ()
+{
+	var file;
+	var input;
+
+	var config = {
+		begin: 0,
+		end: 0,
+		stripHeight: 10,
+		stripWidth: 1000,
+		libs: [ 'statemap-svg.js' ],
+		coalesce: false,
+		autocoalesceTarget: 50000
+	};
+
+	var opts = [ {
+		names: [ 'begin', 'b' ],
+		type: 'offset',
+		help: 'time offset at which to begin statemap'
+	}, {
+		names: [ 'end', 'e' ],
+		type: 'offset',
+		help: 'time offset at which to end statemap'
+	}, {
+		names: [ 'duration', 'd' ],
+		type: 'offset',
+		help: 'time duration of statemap'
+	} ];
+
+	mod_dashdash.addOptionType({
+		name: 'offset',
+		takesArg: true,
+		helpArg: 'OFFSET',
+		parseArg: parseOffset
+	});
+
+	var parser = mod_dashdash.createParser({ options: opts });
+
+	try {
+		opts = parser.parse(process.argv);
+	} catch (err) {
+		fatal(err.message);
+	}
+
+	if (opts.duration) {
+		if (opts.begin && opts.end)
+			fatal('cannot specify all of begin, end, and duration');
+
+		if (!opts.begin && !opts.end)
+			config.end = opts.duration;
+
+		if (opts.begin && !opts.end) {
+			config.begin = opts.begin;
+			config.end = opts.begin + opts.duration;
+		}
+
+		if (!opts.begin && opts.end) {
+			if (opts.end > opts.duration)
+				fatal('end offset cannot exceed duration');
+
+			config.begin = opts.end - opts.duration;
+			config.end = opts.end;
+		}
+	} else {
+		if (opts.begin && opts.end && opts.end < opts.begin)
+			fatal('begin offset must be less than end offset');
+
+		if (opts.begin)
+			config.begin = opts.begin;
+
+		if (opts.end)
+			config.end = opts.end;
+	}
+
+	if (!opts._args || opts._args.length != 1)
+		fatal('must specify a data file');
+
+	file = opts._args[0];
+
+	try {
+		input = JSON.parse(mod_fs.readFileSync(file, 'utf8'));
+	} catch (err) {
+		fatal('couldn\'t parse ' + file + ': ' + err);
+	}
+
+	statemap(config, input);
+};
+
+main();

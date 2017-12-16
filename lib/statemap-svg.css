@@ -1,0 +1,78 @@
+/*
+ * Copyright 2017, Joyent, Inc.
+ */
+
+.sansserif {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+
+.compass {
+	fill:  #fff;
+	stroke:  #000;
+	stroke-width:  1.5;
+}
+
+.button {
+	fill:  #225EA8;
+	stroke:  #0C2C84;
+	stroke-miterlimit:	6;
+	stroke-linecap:  round;
+}
+
+.button:hover {
+	stroke-width:  2;
+}
+
+.plus-minus {
+	fill:  #fff;
+	pointer-events: none;
+}
+
+.statemap-border {
+	fill: none;
+	stroke: black;
+	stroke-width: 0.5;
+}
+
+.statemap-title {
+	font-size:	10pt;
+	font-weight:	bold;
+	text-anchor:	middle;
+}
+
+.statemap-timelabel {
+	font-size:	8pt;
+	text-anchor:	middle;
+}
+
+.statemap-timebar {
+	stroke:		blue;
+	fill:		blue;
+	stroke-width:	1px;
+}
+
+.statemap-timetext {
+	font-size:	8pt;
+	font-weight:	normal;
+	fill:		blue;
+	stroke:		blue;
+	stroke-width:	0px;
+}
+
+.statemap-timeline {
+	stroke: black;
+	stroke-width:	0.5pt;
+	marker-start:	url(#startarrow);
+	marker-end:	url(#endarrow);
+}
+
+.statemap-legend {
+	stroke: black;
+	stroke-width:	0.5pt;
+}
+
+.statemap-legendlabel {
+	font-size:	7pt;
+	text-anchor:	middle;
+}
+
