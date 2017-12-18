@@ -90,7 +90,8 @@ var outputMap = function (map, config)
 {
 	var i;
 
-	out('<g><title>Entity %s</title>', config.entity);
+	out('<g id="%s%s"><title>%s %s</title>', config.entityPrefix,
+	    config.entity, config.entityKind, config.entity);
 
 	for (i = 0; i < map.length; i++) {
 		var w = rectWidth(map, i, config);
@@ -290,7 +291,8 @@ var outputLegend = function (config)
 	var x = 20;
 	var y = config.controlHeight + config.tmargin;
 	var height = 15;
-	var width = config.lmargin - (2 * x);
+	var gutter = 10;
+	var width = config.lmargin - (2 * x) - gutter;
 	var states = config.states;
 
 	for (var state in states) {
@@ -330,6 +332,12 @@ var statemap = function (config, input)
 
 	if (input.title)
 		config.title = input.title;
+
+	if (input.entityKind) {
+		config.entityKind = input.entityKind;
+	} else {
+		config.entityKind = 'Entity';
+	}
 
 	for (state in input.states) {
 		if (input.states[state].hasOwnProperty('value')) {
@@ -425,7 +433,7 @@ var statemap = function (config, input)
 		return (0);
 	});
 
-	var lmargin = 125, tmargin = 60;
+	var lmargin = 138, tmargin = 60;
 	var controlHeight = 175;
 
 	var height = (keys.length * config.stripHeight) + tmargin;
@@ -447,6 +455,7 @@ var statemap = function (config, input)
 	config.lmargin = lmargin;
 	config.tmargin = tmargin;
 	config.controlHeight = controlHeight;
+	config.entityPrefix = 'statemap-entity-';
 
 	if (all && all.length > config.autocoalesceTarget) {
 		var targ = config.autocoalesceTarget;
