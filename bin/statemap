@@ -333,6 +333,18 @@ var statemap = function (config, input)
 	if (input.title)
 		config.title = input.title;
 
+	if (input.start) {
+		if (!(input.start instanceof Array) ||
+		    input.start.length != 2 ||
+		    typeof (input.start[0]) != typeof (1) ||
+		    typeof (input.start[1]) != typeof (input.start[0])) {
+			fatal('when present, "start" property must be a ' +
+			    'two element array');
+		}
+
+		config.start = input.start;
+	}
+
 	if (input.entityKind) {
 		config.entityKind = input.entityKind;
 	} else {
