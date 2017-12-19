@@ -108,7 +108,8 @@ var outputMap = function (map, config)
 		if (!config.coalesce || w >= config.coalesceThreshold) {
 			out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
 			    'height="%d" onclick="mapclick(evt, ' +
-			    mod_util.inspect(datum) + ')" style="fill:%s" />',
+			    mod_util.inspect(datum, false, null) +
+			    ')" style="fill:%s" />',
 			    config.y,
 			    config.stripHeight, config.states[state].color);
 			continue;
@@ -172,7 +173,8 @@ var outputMap = function (map, config)
 
 		out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
 		    'height="%d" onclick="mapclick(evt, ' +
-		    mod_util.inspect(d) + ')" style="fill:%s" />', config.y,
+		    mod_util.inspect(d, false, null) +
+		    ')" style="fill:%s" />', config.y,
 		    config.stripHeight, color);
 	}
 
@@ -188,7 +190,7 @@ var loadLibs = function (config)
 	out('<defs>');
 	out('  <script type="application/ecmascript"><![CDATA[');
 
-	out('var globals = %s;', mod_util.inspect(config));
+	out('var globals = %s;', mod_util.inspect(config, false, null));
 
 	for (i = 0; i < config.libs.length; i++) {
 		var components;
@@ -364,6 +366,9 @@ var statemap = function (config, input)
 
 	stateColors(states);
 
+	config.entities = {};
+	config.entityPrefix = 'statemap-entity-';
+
 	for (i = 0; i < data.length; i++) {
 		datum = data[i];
 
@@ -375,6 +380,15 @@ var statemap = function (config, input)
 
 		if (!datum.entity)
 			fatal('input.data[%d] missing "entity" field', i);
+
+		if (!config.entities[datum.entity])
+			config.entities[datum.entity] = {};
+
+		if (datum.description) {
+			config.entities[datum.entity].description =
+			    datum.description;
+			continue;
+		}
 
 		if (!datum.time)
 			fatal('input.data[%d] missing "time" field', i);
@@ -467,7 +481,6 @@ var statemap = function (config, input)
 	config.lmargin = lmargin;
 	config.tmargin = tmargin;
 	config.controlHeight = controlHeight;
-	config.entityPrefix = 'statemap-entity-';
 
 	if (all && all.length > config.autocoalesceTarget) {
 		var targ = config.autocoalesceTarget;
@@ -603,6 +616,10 @@ var main = function ()
 		names: [ 'duration', 'd' ],
 		type: 'offset',
 		help: 'time duration of statemap'
+	}, {
+		names: [ 'coalesce', 'c' ],
+		type: 'number',
+		help: 'coalesce target'
 	} ];
 
 	mod_dashdash.addOptionType({
@@ -652,6 +669,9 @@ var main = function ()
 
 	if (!opts._args || opts._args.length != 1)
 		fatal('must specify a data file');
+
+	if (opts.coalesce)
+		config.autocoalesceTarget = opts.coalesce;
 
 	file = opts._args[0];
 
