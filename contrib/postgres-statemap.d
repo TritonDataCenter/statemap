@@ -11,12 +11,13 @@
 
 typedef enum {
 	STATE_ON_CPU = 0,
-	STATE_OFF_CPU_WAITING = 1,
-	STATE_OFF_CPU_IO = 2,
-	STATE_OFF_CPU_SEMOP = 3,
-	STATE_OFF_CPU_BLOCKED = 4,
-	STATE_OFF_CPU_DEAD = 5,
-	STATE_MAX = 6
+	STATE_OFF_CPU_WAITING,
+	STATE_OFF_CPU_SEMOP,
+	STATE_OFF_CPU_BLOCKED,
+	STATE_OFF_CPU_IO_READ,
+	STATE_OFF_CPU_IO_WRITE,
+	STATE_OFF_CPU_DEAD,
+	STATE_MAX
 } state_t;
 
 #define STATE_METADATA(_state, _str, _color) \
@@ -31,18 +32,20 @@ BEGIN
 	printf("\t\"title\": \"PostgreSQL statemap on %s, by process ID\",\n",
 	    `utsname.nodename);
 	printf("\t\"host\": \"%s\",\n", `utsname.nodename);
+	printf("\t\"entityKind\": \"Process\",\n");
 	printf("\t\"states\": {\n");
 
 	STATE_METADATA(STATE_ON_CPU, "on-cpu", "#DAF7A6")
 	STATE_METADATA(STATE_OFF_CPU_WAITING, "off-cpu-waiting", "#f9f9f9")
-	STATE_METADATA(STATE_OFF_CPU_BLOCKED, "off-cpu-blocked", "#C70039")
 	STATE_METADATA(STATE_OFF_CPU_SEMOP, "off-cpu-semop", "#FF5733")
-	STATE_METADATA(STATE_OFF_CPU_IO, "off-cpu-io", "#FFC300")
-	STATE_METADATA(STATE_OFF_CPU_DEAD, "off-cpu-dead", "#581845")
+	STATE_METADATA(STATE_OFF_CPU_BLOCKED, "off-cpu-blocked", "#C70039")
+	STATE_METADATA(STATE_OFF_CPU_IO_READ, "off-cpu-io-read", "#FFC300")
+	STATE_METADATA(STATE_OFF_CPU_IO_WRITE, "off-cpu-io-write", "#338AFF")
+	STATE_METADATA(STATE_OFF_CPU_DEAD, "off-cpu-dead", "#E0E0E0")
 
+	printf("\t},\n");
 	printf("\"data\": [\n");
 	start = timestamp;
-	exit(0);
 }
 
 sched:::wakeup
@@ -54,25 +57,32 @@ sched:::wakeup
 	    args[1]->pr_pid);
 }
 
-zio_wait:entry
+syscall::read:entry
 /execname == "postgres"/
 {
-	self->state = STATE_OFF_CPU_IO;
+	self->state = STATE_OFF_CPU_IO_READ;
 }
 
-zio_wait:return
+syscall::write:entry
+/execname == "postgres"/
+{
+	self->state = STATE_OFF_CPU_IO_WRITE;
+}
+
+syscall::read:return,
+syscall::write:return
 /execname == "postgres"/
 {
 	self->state = STATE_ON_CPU;
 }
 
-syscall::semop:entry
+fbt::semop:entry
 /execname == "postgres"/
 {
 	self->state = STATE_OFF_CPU_SEMOP;
 }
 
-syscall::semop:return
+fbt::semop:return
 /execname == "postgres"/
 {
 	self->state = STATE_ON_CPU;
@@ -82,7 +92,7 @@ sched:::off-cpu
 /execname == "postgres"/
 {
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
+	    timestamp - start, pid);
 
 	printf("\"state\": %d },\n", self->state != STATE_ON_CPU ?
 	    self->state : curthread->t_flag & T_WAKEABLE ?
@@ -94,8 +104,46 @@ sched:::on-cpu
 {
 	self->state = STATE_ON_CPU;
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
+	    timestamp - start, pid);
 	printf("\"state\": %d },\n", self->state);
+}
+
+proc:::exit
+/execname == "postgres"/
+{
+	self->exiting = pid;
+}
+
+sched:::off-cpu
+/execname != "postgres" && self->exiting/
+{
+	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
+	    timestamp - start, self->exiting);
+
+	printf("\"state\": %d },\n", STATE_OFF_CPU_DEAD);
+	self->exiting = 0;
+	self->state = 0;
+}
+
+/*
+ * This is -- to put it mildly -- very specific to the implementation of
+ * PostgreSQL: if the process is long-running, it lifts argv[0] out of the
+ * address space, and -- iff it matches the form "postgres: [description]
+ * process", sets the description for the process to be [description].
+ */
+sched:::on-cpu
+/execname == "postgres" &&
+    timestamp - curthread->t_procp->p_mstart > 1000000000 &&
+    !seen[pid]/
+{
+	seen[pid] = 1;
+	this->arg = *(uintptr_t *)copyin(curthread->t_procp->p_user.u_argv, 8);
+	this->index = index(this->process = copyinstr(this->arg), " process");
+
+	if (this->index > 0 && index(this->process, "postgres: ") == 0) {
+		printf("{ \"entity\": \"%d\", \"description\": \"%s\" },\n",
+		    pid, substr(this->process, 10, this->index - 10));
+	}
 }
 
 tick-1sec
