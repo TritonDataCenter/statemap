@@ -106,6 +106,9 @@ var outputMap = function (map, config)
 		    config.timeWidth) * config.pixelWidth);
 
 		if (!config.coalesce || w >= config.coalesceThreshold) {
+			datum.etime = i + 1 < map.length ? map[i + 1].time :
+			    config.begin + config.timeWidth;
+
 			out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
 			    'height="%d" onclick="mapclick(evt, ' +
 			    mod_util.inspect(datum, false, null) +
