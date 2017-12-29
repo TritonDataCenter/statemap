@@ -59,6 +59,14 @@
 	stroke-width:	0px;
 }
 
+.statemap-timebreaktext {
+	font-size:	8pt;
+	font-weight:	bold;
+	fill:		blue;
+	stroke:		white;
+	stroke-width:	0.3px;
+}
+
 .statemap-statebar {
 	stroke:		blue;
 	fill:		blue;
@@ -71,7 +79,6 @@
 	fill:		blue;
 	stroke:		blue;
 	stroke-width:	0px;
-	stroke:		blue;
 }
 
 .statemap-timeline {

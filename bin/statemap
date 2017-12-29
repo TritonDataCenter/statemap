@@ -7,6 +7,7 @@
 var mod_fs = require('fs');
 var mod_path = require('path');
 var mod_util = require('util');
+var mod_assert = require('assert');
 var mod_extsprintf = require('extsprintf');
 var mod_color = require('color');
 var mod_dashdash = require('dashdash');
@@ -89,6 +90,7 @@ var stateColors = function (states)
 var outputMap = function (map, config)
 {
 	var i;
+	var data = [];
 
 	out('<g id="%s%s"><title>%s %s</title>', config.entityPrefix,
 	    config.entity, config.entityKind, config.entity);
@@ -97,7 +99,7 @@ var outputMap = function (map, config)
 		var w = rectWidth(map, i, config);
 		var datum = map[i];
 		var state = datum.state;
-		var x, color;
+		var x, color, idx;
 
 		if (w === 0)
 			continue;
@@ -106,15 +108,19 @@ var outputMap = function (map, config)
 		    config.timeWidth) * config.pixelWidth);
 
 		if (!config.coalesce || w >= config.coalesceThreshold) {
-			datum.etime = i + 1 < map.length ? map[i + 1].time :
-			    config.begin + config.timeWidth;
+			idx = data.length;
+
+			data.push({
+				t: datum.time,
+				s: state
+			});
 
 			out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
 			    'height="%d" onclick="mapclick(evt, ' +
-			    mod_util.inspect(datum, false, null) +
-			    ')" style="fill:%s" />',
+			    idx + ')" style="fill:%s" />',
 			    config.y,
 			    config.stripHeight, config.states[state].color);
+
 			continue;
 		}
 
@@ -158,14 +164,12 @@ var outputMap = function (map, config)
 		color = config.states[max].color;
 
 		var d = {
-			time: datum.time,
-			etime: i + 1 < map.length ? map[i + 1].time :
-			    config.begin + config.timeWidth,
-			states: []
+			t: datum.time,
+			s: {}
 		};
 
 		for (state in widths) {
-			d.states[state] = widths[state] / w;
+			d.s[state] = widths[state] / w;
 
 			if (state == max)
 				continue;
@@ -174,14 +178,18 @@ var outputMap = function (map, config)
 			    widths[state] / w);
 		}
 
+		idx = data.length;
+		data.push(d);
+
 		out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
-		    'height="%d" onclick="mapclick(evt, ' +
-		    mod_util.inspect(d, false, null) +
+		    'height="%d" onclick="mapclick(evt, ' + idx +
 		    ')" style="fill:%s" />', config.y,
 		    config.stripHeight, color);
 	}
 
 	out('</g>');
+
+	return (data);
 };
 
 var loadLibs = function (config)
@@ -262,6 +270,24 @@ var loadLibs = function (config)
 	out('</defs>');
 };
 
+var outputVariables = function (obj)
+{
+	var field;
+
+	out('<defs>');
+	out('  <script type="application/ecmascript"><![CDATA[');
+
+	for (field in obj) {
+		mod_assert(field.indexOf('g_') != -1);
+
+		out('var %s = %s;', field,
+		    mod_util.inspect(obj[field], false, null));
+	}
+
+	out('  ]]></script>');
+	out('</defs>');
+};
+
 var outputControls = function ()
 {
 	out('<circle cx="50" cy="50" r="42" fill="white" opacity="0.75"/>');
@@ -302,15 +328,15 @@ var outputLegend = function (config)
 
 	for (var state in states) {
 		out('<rect x="%d" y="%d" width="%d" height="%d" ' +
+		    'id="statemap-legend-%s" ' +
 		    'class="statemap-legend" style="fill:%s" />',
-		    x, y, width, height, states[state].color);
+		    x, y, width, height, state, states[state].color);
 		y += height + 10;
 
 		out('<text x="%d" y="%d" class="statemap-legendlabel ' +
 		    'sansserif">%s</text>', x + (width / 2), y,
 		    states[state].name);
-		y += 15;
-
+		y += 20;
 	}
 };
 
@@ -516,14 +542,18 @@ var statemap = function (config, input)
 
 	out('<g id="statemap" transform="matrix(1 0 0 1 0 0)">');
 
+	var map = {};
+
 	for (i = 0; i < keys.length; i++) {
 		config.entity = keys[i];
-		outputMap(maps[keys[i]], config);
+		map[config.entity] = outputMap(maps[keys[i]], config);
 		config.y += config.stripHeight;
 	}
 
 	out('</g>');
 	out('</svg>');
+
+	outputVariables({ g_data: map });
 
 	/*
 	 * The border around our statemap.
