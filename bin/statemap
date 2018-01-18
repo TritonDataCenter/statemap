@@ -666,6 +666,10 @@ var main = function ()
 		names: [ 'coalesce', 'c' ],
 		type: 'number',
 		help: 'coalesce target'
+	}, {
+		names: [ 'stripHeight', 's' ],
+		type: 'number',
+		help: 'height of each state strip, in pixels'
 	} ];
 
 	mod_dashdash.addOptionType({
@@ -718,6 +722,9 @@ var main = function ()
 
 	if (opts.coalesce)
 		config.autocoalesceTarget = opts.coalesce;
+
+	if (opts.stripHeight)
+		config.stripHeight = Math.floor(opts.stripHeight);
 
 	file = opts._args[0];
 
