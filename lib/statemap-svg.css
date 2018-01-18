@@ -6,26 +6,8 @@
 	font-family: Verdana, Arial, Helvetica, sans-serif;
 }
 
-.compass {
-	fill:  #fff;
-	stroke:  #000;
-	stroke-width:  1.5;
-}
-
 .button {
-	fill:  #225EA8;
-	stroke:  #0C2C84;
-	stroke-miterlimit:	6;
-	stroke-linecap:  round;
-}
-
-.button:hover {
-	stroke-width:  2;
-}
-
-.plus-minus {
-	fill:  #fff;
-	pointer-events: none;
+        fill: #fff;
 }
 
 .statemap-border {

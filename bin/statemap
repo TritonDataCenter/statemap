@@ -288,43 +288,57 @@ var outputVariables = function (obj)
 	out('</defs>');
 };
 
-var outputControls = function ()
+var outputIcon = function (icon, props, onclick)
 {
-	out('<circle cx="50" cy="50" r="42" fill="white" opacity="0.75"/>');
-	out('<path class="button" onclick="pan(0,50)"');
-	out('    d="M50 10 l12 20 a40,70 0 0,0 -24,0z" />');
-	out('<path class="button" onclick="pan(50,0)"');
-	out('    d="M10 50 l20 -12 a70,40 0 0,0 0,24z" />');
-	out('<path class="button" onclick="pan(0,-50)"');
-	out('    d="M50 90 l12 -20 a40,70 0 0,1 -24,0z" />');
+	var file, text;
 
-	out('<path class="button" onclick="pan(-50,0)"');
-	out('    d="M90 50 l-20 -12 a70,40 0 0,1 0,24z" />');
+	try {
+		file = require.resolve('../lib/icons/' + icon + '.svg');
+		text = mod_fs.readFileSync(file, 'utf8');
+	} catch (err) {
+		fatal('couldn\'t load icon %s: %s', file, err);
+	}
 
-	out('<circle class="compass" cx="50" cy="50" r="20"/>');
-	out('<circle class="button"  cx="50" cy="41" r="8"');
-	out('    onclick="zoom(0.8)"/>');
-	out('<circle class="button"  cx="50" cy="59" r="8"');
-	out('    onclick="zoom(1.25)"/>');
+	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx" onclick="%s">\n',
+	    props.x, props.y, props.width, props.height, onclick);
+	out('<rect x="0px" y="0px" width="%dpx" ' +
+	    'height="%dpx" onclick="%s" class="button" />\n',
+	    props.width, props.height, onclick);
+	out('%s', text);
 
-	out('<rect class="plus-minus" x="46" y="39.5"');
-	    out('width="8" height="3"/>');
-
-	out('<rect class="plus-minus" x="46" y="57.5"');
-	    out('width="8" height="3"/>');
-
-	out('<rect class="plus-minus" x="48.5" y="55"');
-	    out('width="3" height="8"/>');
+	out('</svg>');
 };
 
-var outputLegend = function (config)
+var outputControls = function (props)
 {
-	var x = 20;
-	var y = config.controlHeight + config.tmargin;
-	var height = 15;
-	var gutter = 10;
-	var width = config.lmargin - (2 * x) - gutter;
-	var states = config.states;
+	var i;
+	var width = props.width / 4;
+	var iprops = { x: 0, y: 0, width: width, height: width };
+
+	var icons = [
+	    [ 'arrow-left-l', 'pan(50, 0)' ],
+	    [ 'zoom-in', 'zoom(1.25)' ],
+	    [ 'zoom-out', 'zoom(0.8)' ],
+	    [ 'arrow-right-l', 'pan(-50, 0)' ]
+	];
+
+	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
+	    props.x, props.y, props.width, props.height);
+
+	for (i = 0; i < icons.length; i++)  {
+		outputIcon(icons[i][0], iprops, icons[i][1]);
+		iprops.x += width;
+	}
+
+	out('</svg>');
+};
+
+var outputLegend = function (props, states)
+{
+	var x = props.x;
+	var y = props.y;
+	var height = props.height;
+	var width = props.width;
 
 	for (var state in states) {
 		out('<rect x="%d" y="%d" width="%d" height="%d" ' +
@@ -336,7 +350,7 @@ var outputLegend = function (config)
 		out('<text x="%d" y="%d" class="statemap-legendlabel ' +
 		    'sansserif">%s</text>', x + (width / 2), y,
 		    states[state].name);
-		y += 20;
+		y += 10;
 	}
 };
 
@@ -489,7 +503,6 @@ var statemap = function (config, input)
 	});
 
 	var lmargin = 138, tmargin = 60;
-	var controlHeight = 175;
 
 	var height = (keys.length * config.stripHeight) + tmargin;
 	var width = config.stripWidth;
@@ -509,7 +522,6 @@ var statemap = function (config, input)
 	config.y = 0;
 	config.lmargin = lmargin;
 	config.tmargin = tmargin;
-	config.controlHeight = controlHeight;
 
 	if (all && all.length > config.autocoalesceTarget) {
 		var targ = config.autocoalesceTarget;
@@ -577,13 +589,14 @@ var statemap = function (config, input)
 	    lmargin + config.pixelWidth - 10, 40);
 	out('class="statemap-timeline" />');
 
-	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
-	    10, tmargin, lmargin, controlHeight);
+	var props = { x: 20, y: tmargin, height: 45, width: lmargin };
+	props.width -= (2 * props.x) + 10;
 
-	outputControls();
-	out('</svg>');
+	outputControls(props);
 
-	outputLegend(config);
+	props.y += props.height;
+	props.height = 15;
+	outputLegend(props, states);
 
 	out('<!-- %j !-->', states);
 	out('<!-- coalesced: %d !-->', config.coalesced);
