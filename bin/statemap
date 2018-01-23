@@ -23,6 +23,11 @@ var fatal = function ()
 	process.exit(1);
 };
 
+var dump = function (obj)
+{
+	return (mod_util.inspect(obj, { depth: null, maxArrayLength: null }));
+};
+
 var check = function (input, field)
 {
 	if (input.hasOwnProperty(field))
@@ -201,7 +206,7 @@ var loadLibs = function (config)
 	out('<defs>');
 	out('  <script type="application/ecmascript"><![CDATA[');
 
-	out('var globals = %s;', mod_util.inspect(config, false, null));
+	out('var globals = %s;', dump(config));
 
 	for (i = 0; i < config.libs.length; i++) {
 		var components;
@@ -280,8 +285,7 @@ var outputVariables = function (obj)
 	for (field in obj) {
 		mod_assert(field.indexOf('g_') != -1);
 
-		out('var %s = %s;', field,
-		    mod_util.inspect(obj[field], false, null));
+		out('var %s = %s;', field, dump(obj[field]));
 	}
 
 	out('  ]]></script>');
