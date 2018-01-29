@@ -43,8 +43,7 @@ BEGIN
 	STATE_METADATA(STATE_OFF_CPU_IO_WRITE, "off-cpu-io-write", "#338AFF")
 	STATE_METADATA(STATE_OFF_CPU_DEAD, "off-cpu-dead", "#E0E0E0")
 
-	printf("\t},\n");
-	printf("\"data\": [\n");
+	printf("\t}\n}\n");
 	start = timestamp;
 }
 
@@ -53,7 +52,7 @@ sched:::wakeup
 {
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
 	    timestamp - start, pid);
-	printf("\"event\": \"wakeup\", \"target\": \"%d\" },\n",
+	printf("\"event\": \"wakeup\", \"target\": \"%d\" }\n",
 	    args[1]->pr_pid);
 }
 
@@ -94,7 +93,7 @@ sched:::off-cpu
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
 	    timestamp - start, pid);
 
-	printf("\"state\": %d },\n", self->state != STATE_ON_CPU ?
+	printf("\"state\": %d }\n", self->state != STATE_ON_CPU ?
 	    self->state : curthread->t_flag & T_WAKEABLE ?
 	    STATE_OFF_CPU_WAITING : STATE_OFF_CPU_BLOCKED);
 }
@@ -105,7 +104,7 @@ sched:::on-cpu
 	self->state = STATE_ON_CPU;
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
 	    timestamp - start, pid);
-	printf("\"state\": %d },\n", self->state);
+	printf("\"state\": %d }\n", self->state);
 }
 
 proc:::exit
@@ -120,7 +119,7 @@ sched:::off-cpu
 	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
 	    timestamp - start, self->exiting);
 
-	printf("\"state\": %d },\n", STATE_OFF_CPU_DEAD);
+	printf("\"state\": %d }\n", STATE_OFF_CPU_DEAD);
 	self->exiting = 0;
 	self->state = 0;
 }
@@ -141,7 +140,7 @@ sched:::on-cpu
 	this->index = index(this->process = copyinstr(this->arg), " process");
 
 	if (this->index > 0 && index(this->process, "postgres: ") == 0) {
-		printf("{ \"entity\": \"%d\", \"description\": \"%s\" },\n",
+		printf("{ \"entity\": \"%d\", \"description\": \"%s\" }\n",
 		    pid, substr(this->process, 10, this->index - 10));
 	}
 }
@@ -150,9 +149,4 @@ tick-1sec
 /timestamp - start > 60 * 1000000000/
 {
 	exit(0);
-}
-
-END
-{
-	printf("{} ] }\n");
 }

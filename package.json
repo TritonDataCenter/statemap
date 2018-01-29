@@ -7,7 +7,11 @@
 	"dependencies": {
 		"extsprintf": "^1.4.0",
 		"color": "^2.0.1",
-		"dashdash": "^1.14.1"
+		"dashdash": "^1.14.1",
+		"concatjson": "^2.0.1"
+	},
+	"engines": {
+		"node": ">=4.0.0"
 	},
 	"bin": {
 		"statemap": "bin/statemap"

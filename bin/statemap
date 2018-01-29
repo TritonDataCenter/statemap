@@ -11,6 +11,7 @@ var mod_assert = require('assert');
 var mod_extsprintf = require('extsprintf');
 var mod_color = require('color');
 var mod_dashdash = require('dashdash');
+var mod_concatjson = require('concatjson');
 
 var fatal = function ()
 {
@@ -358,6 +359,34 @@ var outputLegend = function (props, states)
 	}
 };
 
+var isDatum = function (datum)
+{
+	if (!datum.entity)
+		return (false);
+
+	if (datum.description)
+		return (true);
+
+	if (!datum.time)
+		return (false);
+
+	if (typeof (datum.time) == typeof (''))
+		datum.time = parseInt(datum.time, 10);
+
+	return (true);
+};
+
+var filteredDatum = function (config, datum)
+{
+	if (datum.time < config.begin)
+		return (true);
+
+	if (config.end && datum.time > config.end)
+		return (true);
+
+	return (false);
+};
+
 var statemap = function (config, input)
 {
 	var maps = {}, events = {}, states = {};
@@ -425,8 +454,18 @@ var statemap = function (config, input)
 		if (Object.keys(datum).length === 0)
 			continue;
 
-		if (!datum.entity)
-			fatal('input.data[%d] missing "entity" field', i);
+		if (!isDatum(datum)) {
+			var msg = [];
+
+			if (!datum.entity)
+				msg.push('missing "entity" field');
+
+			if (!datum.time)
+				msg.push('missing "time" field');
+
+			fatal('input.data[%d] is invalid: %s',
+			    i, msg.join(', '));
+		}
 
 		if (!config.entities[datum.entity])
 			config.entities[datum.entity] = {};
@@ -437,13 +476,7 @@ var statemap = function (config, input)
 			continue;
 		}
 
-		if (!datum.time)
-			fatal('input.data[%d] missing "time" field', i);
-
-		datum.time = parseInt(datum.time, 10);
-
-		if (datum.time < config.begin ||
-		    (config.end && datum.time > config.end))
+		if (filteredDatum(config, datum))
 			continue;
 
 		latest = datum;
@@ -641,8 +674,7 @@ var parseOffset = function (option, optstr, arg)
 
 var main = function ()
 {
-	var file;
-	var input;
+	var file, input, stream;
 
 	var config = {
 		begin: 0,
@@ -731,14 +763,39 @@ var main = function ()
 		config.stripHeight = Math.floor(opts.stripHeight);
 
 	file = opts._args[0];
+	input = {};
 
-	try {
-		input = JSON.parse(mod_fs.readFileSync(file, 'utf8'));
-	} catch (err) {
+	stream = mod_fs.createReadStream(file).pipe(mod_concatjson.parse());
+
+	stream.on('error', function (err) {
 		fatal('couldn\'t parse ' + file + ': ' + err);
-	}
+	});
 
-	statemap(config, input);
+	stream.on('data', function (obj) {
+		var f;
+
+		if (isDatum(obj)) {
+			if (filteredDatum(config, obj))
+				return;
+
+			if (!input.data)
+				input.data = [];
+
+			input.data.push(obj);
+			return;
+		}
+
+		for (f in obj) {
+			if (input.hasOwnProperty(f))
+				fatal('input contains duplicate "%s" field', f);
+
+			input[f] = obj[f];
+		}
+	});
+
+	stream.on('end', function () {
+		statemap(config, input);
+	});
 };
 
 main();

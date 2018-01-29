@@ -1,7 +1,7 @@
 #!/usr/sbin/dtrace -Cs
 
 /*
- * Copyright 2017, Joyent, Inc.
+ * Copyright 2018, Joyent, Inc.
  */
 
 #pragma D option quiet
@@ -34,8 +34,7 @@ BEGIN
 	STATE_METADATA(8, "8 I/Os", "#bd0026");
 	STATE_METADATA(STATE_MAXIO, ">8 I/Os", "#800026");
 
-	printf("\t},\n");
-	printf("\t\"data\": [\n");
+	printf("\t}\n}\n");
 	start = timestamp;
 }
 
@@ -44,7 +43,7 @@ scsi-transport-dispatch
 	this->b = (struct buf *)arg0;
 	this->u = ((struct sd_xbuf *)this->b->b_private)->xb_un;
 
-	printf("{ \"time\": \"%d\", \"entity\": \"sd%d\", \"state\": %d },\n",
+	printf("{ \"time\": \"%d\", \"entity\": \"sd%d\", \"state\": %d }\n",
 	    timestamp - start,
 	    ((struct dev_info *)this->u->un_sd->sd_dev)->devi_instance,
 	    this->u->un_ncmds_in_transport < STATE_MAXIO ?
@@ -60,7 +59,7 @@ sdintr:entry
 sdintr:return
 /(this->u = self->un) != NULL/
 {
-	printf("{ \"time\": \"%d\", \"entity\": \"sd%d\", \"state\": %d },\n",
+	printf("{ \"time\": \"%d\", \"entity\": \"sd%d\", \"state\": %d }\n",
 	    timestamp - start,
 	    ((struct dev_info *)this->u->un_sd->sd_dev)->devi_instance,
 	    this->u->un_ncmds_in_transport < STATE_MAXIO ?
@@ -74,9 +73,3 @@ tick-1sec
 {
 	exit(0);
 }
-
-END
-{
-	printf("{} ] }\n");
-}
-

@@ -28,7 +28,7 @@ BEGIN
 	wall = walltimestamp;
 	printf("{\n\t\"start\": [ %d, %d ],\n",
 	    wall / 1000000000, wall % 1000000000);
-	printf("\t\"title\": \"Statemap for LX process ID %s on %s\",\n",
+	printf("\t\"title\": \"Statemap for all %s LX processes on %s\",\n",
 	    $$1, `utsname.nodename);
 	printf("\t\"host\": \"%s\",\n", `utsname.nodename);
 	printf("\t\"states\": {\n");
@@ -44,44 +44,35 @@ BEGIN
 	start = timestamp;
 }
 
-sched:::wakeup
-/pid == $1 && args[1]->pr_pid == $1/
-{
-	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
-	printf("\"event\": \"wakeup\", \"target\": \"%d\" }\n",
-	    args[0]->pr_lwpid);
-}
-
 zfs_fillpage:entry
-/pid == $1/
+/execname == $$1/
 {
 	self->state = STATE_OFF_CPU_IO;
 }
 
 zfs_fillpage:return
-/pid == $1/
+/execname == $$1/
 {
 	self->state = STATE_ON_CPU;
 }
 
 lx_futex:entry
-/pid == $1/
+/execname == $$1/
 {
 	self->state = STATE_OFF_CPU_FUTEX;
 }
 
 lx_futex:return
-/pid == $1/
+/execname == $$1/
 {
 	self->state = STATE_ON_CPU;
 }
 
 sched:::off-cpu
-/pid == $1/
+/execname == $$1/
 {
-	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
+	printf("{ \"time\": \"%d\", \"entity\": \"%d/%d\", ",
+	    timestamp - start, pid, tid);
 
 	printf("\"state\": %d }\n", self->state != STATE_ON_CPU ?
 	    self->state : curthread->t_flag & T_WAKEABLE ?
@@ -89,19 +80,19 @@ sched:::off-cpu
 }
 
 sched:::on-cpu
-/pid == $1/
+/execname == $$1/
 {
 	self->state = STATE_ON_CPU;
-	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
+	printf("{ \"time\": \"%d\", \"entity\": \"%d/%d\", ",
+	    timestamp - start, pid, tid);
 	printf("\"state\": %d }\n", self->state);
 }
 
 proc:::lwp-exit
-/pid == $1/
+/execname == $$1/
 {
-	printf("{ \"time\": \"%d\", \"entity\": \"%d\", ",
-	    timestamp - start, tid);
+	printf("{ \"time\": \"%d\", \"entity\": \"%d/%d\", ",
+	    timestamp - start, pid, tid);
 	printf("\"state\": %d }\n", STATE_OFF_CPU_DEAD);
 }
 
