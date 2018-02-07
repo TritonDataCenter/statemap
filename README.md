@@ -122,6 +122,8 @@ datum is a JSON object that must contain the following members:
 - `time`: The time of the datum, expressed as a nanosecond offset from
   the `start` member present in the metadata.
 
+- `state`: The state of the entity at the given time.
+
 ## Rendering
 
 To render a statemap, run the `statemap` command, providing an instrumentation
