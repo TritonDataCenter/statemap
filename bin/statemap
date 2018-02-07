@@ -367,7 +367,7 @@ var isDatum = function (datum)
 	if (datum.description)
 		return (true);
 
-	if (!datum.time)
+	if (!datum.hasOwnProperty('time'))
 		return (false);
 
 	if (typeof (datum.time) == typeof (''))
@@ -460,7 +460,7 @@ var statemap = function (config, input)
 			if (!datum.entity)
 				msg.push('missing "entity" field');
 
-			if (!datum.time)
+			if (!datum.hasOwnProperty('time'))
 				msg.push('missing "time" field');
 
 			fatal('input.data[%d] is invalid: %s',
