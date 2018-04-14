@@ -12,6 +12,7 @@ var mod_extsprintf = require('extsprintf');
 var mod_color = require('color');
 var mod_dashdash = require('dashdash');
 var mod_concatjson = require('concatjson');
+var mod_statemap = require('../build/Release/statemap');
 
 var fatal = function ()
 {
@@ -47,15 +48,7 @@ var out = function ()
 
 var rectWidth = function (map, index, config)
 {
-	var etime;
-
-	if (index + 1 < map.length) {
-		etime = map[index + 1].time;
-	} else {
-		etime = config.begin + config.timeWidth;
-	}
-
-	return (((etime - map[index].time) / config.timeWidth) *
+	return ((map[index].duration / config.timeWidth) *
 	    config.pixelWidth);
 };
 
@@ -104,8 +97,8 @@ var outputMap = function (map, config)
 	for (i = 0; i < map.length; i++) {
 		var w = rectWidth(map, i, config);
 		var datum = map[i];
-		var state = datum.state;
-		var x, color, idx;
+		var state = -1;
+		var x, color, idx, j;
 
 		if (w === 0)
 			continue;
@@ -113,7 +106,17 @@ var outputMap = function (map, config)
 		x = (((datum.time - config.begin) /
 		    config.timeWidth) * config.pixelWidth);
 
-		if (!config.coalesce || w >= config.coalesceThreshold) {
+		for (j = 0; j < datum.states.length; j++) {
+			if (datum.states[j] != 0) {
+				if (state != -1)
+					break;
+				state = j;
+			}
+		}
+
+		if (j == datum.states.length) {
+			mod_assert(state != -1);
+
 			idx = data.length;
 
 			data.push({
@@ -130,41 +133,11 @@ var outputMap = function (map, config)
 			continue;
 		}
 
-		/*
-		 * If our width is less than our coalesce threshold, search
-		 * forward in states until we reach the threshold.
-		 */
-		var widths = {};
-
-		widths[state] = w;
-
-		while (w < config.coalesceThreshold && i + 1 < map.length) {
-			var nextw = rectWidth(map, i + 1, config);
-
-			if (nextw > config.coalesceThreshold)
-				break;
-
-			/*
-			 * Our next width is also less than our coalesce
-			 * threshold.  Add to our total width, increase i,
-			 * and keep track of how much time we are in which
-			 * state.
-			 */
-			w += nextw;
-
-			if (!widths[map[i + 1].state])
-				widths[map[i + 1].state] = 0;
-
-			widths[map[i + 1].state] += nextw;
-			config.coalesced++;
-			i++;
-		}
-
 		var max = state;
 
-		for (state in widths) {
-			if (widths[state] > widths[max])
-				max = state;
+		for (j = 0; j < datum.states.length; j++) {
+			if (datum.states[j] > datum.states[state])
+				max = j;
 		}
 
 		color = config.states[max].color;
@@ -174,14 +147,18 @@ var outputMap = function (map, config)
 			s: {}
 		};
 
-		for (state in widths) {
-			d.s[state] = widths[state] / w;
+		for (j = 0; j < datum.states.length; j++) {
+			var ratio = 0;
 
-			if (state == max)
+			if (datum.states[j]) {
+				ratio = datum.states[j] / datum.duration;
+				d.s[j] = Math.round(ratio * 1000) / 1000;
+			}
+
+			if (j == max)
 				continue;
 
-			color = color.mix(config.states[state].color,
-			    widths[state] / w);
+			color = color.mix(config.states[j].color, ratio);
 		}
 
 		idx = data.length;
@@ -389,11 +366,11 @@ var filteredDatum = function (config, datum)
 
 var statemap = function (config, input)
 {
-	var maps = {}, events = {}, states = {};
-	var latest, data, datum;
+	var maps = {}, states = {};
+	var latest = undefined, data, datum;
 	var state, value;
 	var i, j;
-	var what;
+	var sortby = 0;
 
 	if (!config.hasOwnProperty('begin'))
 		config.begin = 0;
@@ -401,7 +378,13 @@ var statemap = function (config, input)
 	if (!config.hasOwnProperty('end'))
 		config.end = 0;
 
-	var sortby = 'on-cpu';
+	if (!config.sortby)
+		config.sortby = 'on-cpu';
+
+	for (i = 0; i < input.states.length; i++) {
+		if (input.states[i].name == config.sortby)
+			sortby = i;
+	}
 
 	check(input, 'data');
 	check(input, 'states');
@@ -448,25 +431,6 @@ var statemap = function (config, input)
 	for (i = 0; i < data.length; i++) {
 		datum = data[i];
 
-		/*
-		 * We permit entirely empty datum objects.
-		 */
-		if (Object.keys(datum).length === 0)
-			continue;
-
-		if (!isDatum(datum)) {
-			var msg = [];
-
-			if (!datum.entity)
-				msg.push('missing "entity" field');
-
-			if (!datum.time)
-				msg.push('missing "time" field');
-
-			fatal('input.data[%d] is invalid: %s',
-			    i, msg.join(', '));
-		}
-
 		if (!config.entities[datum.entity])
 			config.entities[datum.entity] = {};
 
@@ -476,57 +440,29 @@ var statemap = function (config, input)
 			continue;
 		}
 
-		if (filteredDatum(config, datum))
-			continue;
-
-		latest = datum;
-
-		if (datum.event) {
-			what = events;
-		} else if (datum.hasOwnProperty('state')) {
-			what = maps;
-
-			if (!states[datum.state]) {
-				fatal('input.data[%d] has unknown state %s',
-				    i, datum.state);
-			}
+		if (!maps[datum.entity]) {
+			maps[datum.entity] = [ datum ];
 		} else {
-			fatal('input.data[%d] is neither an event nor a ' +
-			    'state transition', i);
+			maps[datum.entity].push(datum);
 		}
 
-		if (!what[datum.entity]) {
-			what[datum.entity] = [ datum ];
-		} else {
-			what[datum.entity].push(datum);
+		if (!latest || datum.time + datum.duration >
+		    latest.time + latest.duration) {
+			latest = datum;
 		}
 	}
 
-	var timeWidth = latest.time - config.begin;
+	var timeWidth = (latest.time + latest.duration) - config.begin;
 
 	var keys = Object.keys(maps);
 	var weight = {};
-	var all = undefined;
-
-	if (config.autocoalesceTarget)
-		all = [];
 
 	for (i = 0; i < keys.length; i++) {
 		var key = keys[i];
 		weight[key] = 0;
 
-		for (j = 0; j < maps[key].length; j++) {
-			var etime = j < maps[key].length - 1 ?
-			    maps[key][j + 1].time : timeWidth + config.begin;
-
-			datum = maps[key][j];
-
-			if (states[datum.state].name == sortby)
-				weight[key] += etime - datum.time;
-
-			if (all)
-				all.push(etime - datum.time);
-		}
+		for (j = 0; j < maps[key].length; j++)
+			weight[key] += maps[key][j].states[sortby];
 	}
 
 	keys.sort(function (lhs, rhs) {
@@ -560,30 +496,6 @@ var statemap = function (config, input)
 	config.lmargin = lmargin;
 	config.tmargin = tmargin;
 
-	if (all && all.length > config.autocoalesceTarget) {
-		var targ = config.autocoalesceTarget;
-		var thresh;
-
-		all.sort(function (lhs, rhs) {
-			if (lhs < rhs)
-				return (1);
-
-			if (lhs > rhs)
-				return (-1);
-
-			return (0);
-		});
-
-		thresh = (all[targ] / config.timeWidth) * config.pixelWidth;
-
-		if (thresh < 1.0)
-			thresh = 1.0;
-
-		config.coalesceThreshold = thresh;
-		config.coalesce = true;
-	}
-
-	config.coalesced = 0;
 	loadLibs(config);
 
 	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
@@ -674,16 +586,14 @@ var parseOffset = function (option, optstr, arg)
 
 var main = function ()
 {
-	var file, input, stream;
+	var file, stream;
 
 	var config = {
 		begin: 0,
 		end: 0,
 		stripHeight: 10,
 		stripWidth: 1000,
-		libs: [ 'statemap-svg.js' ],
-		coalesce: false,
-		autocoalesceTarget: 50000
+		libs: [ 'statemap-svg.js' ]
 	};
 
 	var opts = [ {
@@ -757,13 +667,12 @@ var main = function ()
 		fatal('must specify a data file');
 
 	if (opts.coalesce)
-		config.autocoalesceTarget = opts.coalesce;
+		config.maxrect = opts.coalesce;
 
 	if (opts.stripHeight)
 		config.stripHeight = Math.floor(opts.stripHeight);
 
 	file = opts._args[0];
-	input = {};
 
 	stream = mod_fs.createReadStream(file).pipe(mod_concatjson.parse());
 
@@ -772,29 +681,17 @@ var main = function ()
 	});
 
 	stream.on('data', function (obj) {
-		var f;
+		if (isDatum(obj))
+			fatal('expected metadata as first payload');
 
-		if (isDatum(obj)) {
-			if (filteredDatum(config, obj))
-				return;
+		obj.data = [];
 
-			if (!input.data)
-				input.data = [];
+		config.coalesced = mod_statemap.ingest(file, function (datum) {
+			obj.data.push(datum);
+		}, config);
 
-			input.data.push(obj);
-			return;
-		}
-
-		for (f in obj) {
-			if (input.hasOwnProperty(f))
-				fatal('input contains duplicate "%s" field', f);
-
-			input[f] = obj[f];
-		}
-	});
-
-	stream.on('end', function () {
-		statemap(config, input);
+		statemap(config, obj);
+		process.exit(0);
 	});
 };
 

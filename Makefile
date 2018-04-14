@@ -13,6 +13,7 @@
 #
 JSL		 = ./deps/javascriptlint/build/install/jsl
 JSSTYLE		 = ./deps/jsstyle/jsstyle
+CSTYLE		 = ./tools/cstyle.pl
 # md2man-roff can be found at <https://github.com/sunaku/md2man>.
 MD2MAN          := md2man-roff
 NODE	 	 = node
@@ -33,6 +34,7 @@ JS_FILES	:= \
 
 JSL_FILES_NODE	 = $(JS_FILES)
 JSSTYLE_FILES	 = $(JS_FILES)
+CSTYLE_FILES	 = ./src/statemap.h ./src/statemap.c ./src/avl/avl.c
 
 include Makefile.defs
 

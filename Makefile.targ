@@ -207,8 +207,13 @@ JSSTYLE_TARGET = $(if $(JSSTYLE_FILES), check-jsstyle)
 check-jsstyle:  $(JSSTYLE_EXEC)
 	$(JSSTYLE) $(JSSTYLE_FLAGS) $(JSSTYLE_FILES)
 
+CSTYLE_TARGET = $(if $(CSTYLE_FILES), check-cstyle)
+.PHONY: check-cstyle
+check-cstyle:  $(CSTYLE)
+	$(CSTYLE) $(CSTYLE_FILES)
+
 .PHONY: check
-check:: check-jsl check-json $(JSSTYLE_TARGET) check-bash
+check:: check-jsl check-json $(CSTYLE_TARGET) $(JSSTYLE_TARGET) check-bash
 	@echo check ok
 
 .PHONY: clean
