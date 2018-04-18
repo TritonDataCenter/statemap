@@ -38,7 +38,11 @@ extern "C" {
 #include <stdint.h>
 
 typedef unsigned long	ulong_t;
+
+#ifndef __sun__
 typedef enum { B_FALSE, B_TRUE } boolean_t;
+#endif
+
 #include "avl_impl.h"
 
 

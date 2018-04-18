@@ -1,5 +1,6 @@
 #include <node.h>
 #include <string>
+#include <strings.h>
 #include "statemap.h"
 
 namespace glue {

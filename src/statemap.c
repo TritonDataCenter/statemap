@@ -13,6 +13,8 @@
 #include <sys/mman.h>
 #include <ctype.h>
 #include <assert.h>
+#include <strings.h>
+#include <alloca.h>
 
 #include "statemap.h"
 #include "./jsmn/jsmn.h"
@@ -24,6 +26,8 @@ assfail(const char *expr, const char *file, int line)
 	    expr, file, line);
 
 	assert(0);
+
+	return (0);
 }
 
 static void
@@ -331,10 +335,12 @@ statemap_rect_add(statemap_rect_t *rect, avl_tree_t *rects)
 void
 statemap_rect_update(statemap_rect_t *rect, avl_tree_t *rects)
 {
-	long long weight = rect->smr_duration;
+	long long weight;
 
 	if (rect == NULL)
 		return;
+
+	weight = rect->smr_duration;
 
 	if (rect->smr_prev != NULL)
 		weight += rect->smr_prev->smr_duration;
@@ -561,7 +567,7 @@ statemap_ingest_newrect(statemap_t *statemap,
     statemap_entity_t *entity, long long time)
 {
 	statemap_rect_t *rect;
-	statemap_rect_t *victim, *survivor, *left, *right;
+	statemap_rect_t *victim, *survivor, *left;
 	avl_tree_t *rects = &statemap->sm_rects;
 	int i;
 
@@ -639,17 +645,15 @@ statemap_ingest_newrect(statemap_t *statemap,
 	 */
 	if (victim->smr_prev == NULL) {
 		left = victim;
-		right = survivor = victim->smr_next;
+		survivor = victim->smr_next;
 	} else if (victim->smr_next == NULL) {
 		left = survivor = victim->smr_prev;
-		right = victim;
 	} else if (victim->smr_prev->smr_duration <
 	    victim->smr_next->smr_duration) {
 		left = survivor = victim->smr_prev;
-		right = victim;
 	} else {
 		left = victim;
-		right = survivor = victim->smr_next;
+		survivor = victim->smr_next;
 	}
 
 	assert(survivor->smr_entity == victim->smr_entity);
