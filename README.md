@@ -33,6 +33,12 @@ as input to the `statemap` command:
 <th>Statemap description</th>
 </tr>
 <tr>
+<td><a href="./contrib/cpu-statemap.d">cpu-statemap.d</a></td>
+<td>DTrace</td>
+<td>SmartOS</td>
+<td>CPU activity by CPU</td>
+</tr>
+<tr>
 <td><a href="./contrib/io-statemap.d">io-statemap.d</a></td>
 <td>DTrace</td>
 <td>SmartOS</td>
@@ -81,8 +87,7 @@ second (the 1st element).  The start time should be expressed in UTC.
   entity state.  Each member object can contain the following :
 
   - `value`: The value by which this state will be referred to in the 
-    data stream.  If there is no value member, it is assumed that the data
-    stream will refer to the state by its name.
+    data stream.
 
   - `color`: The color that should be used to render the state. If the
     color is not specified, a color will be selected at random.
@@ -105,22 +110,18 @@ optional:
 
 - `host`: The host on which the data was gathered.
 
-- `data`: If present, the ```data``` member must be an array of
-  objects that contain the statemap data.  If absent, the data will be
-  assumed to be present in concatenated JSON in which each payload represents
-  a datum.
-
 #### Data
 
-The data for a statemap may appear either as the `data` member in a
-metadata payload (in which case it is as an array of data) or as
-concatenated JSON (in which case each JSON payload is a datum).  Each
+The data for a statemap is provided following the metadata as
+concatenated JSON (that is, each JSON payload is a datum).  Each
 datum is a JSON object that must contain the following members:
 
 - `entity`: The name of the entity.
 
 - `time`: The time of the datum, expressed as a nanosecond offset from
   the `start` member present in the metadata.
+
+- `state`: The value of the state that begins at the time of the datum.
 
 ## Rendering
 
@@ -166,7 +167,10 @@ result in less coalescence.
 may be expressed in floating point with an optional suffix (e.g.,
 `-d 491.2ms`).
 
-- `-s` (`--stripHeight`): The height (in pixels) of each state in the
+- `-h` (`--stateHeight`): The height (in pixels) of each state in the
+statemap.
+
+- `-s` (`--stateHeight`): The height (in pixels) of each state in the
 statemap.
 
 ## Interaction

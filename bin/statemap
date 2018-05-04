@@ -370,7 +370,7 @@ var statemap = function (config, input)
 	var latest = undefined, data, datum;
 	var state, value;
 	var i, j;
-	var sortby = 0;
+	var sortby = -1;
 
 	if (!config.hasOwnProperty('begin'))
 		config.begin = 0;
@@ -378,12 +378,13 @@ var statemap = function (config, input)
 	if (!config.hasOwnProperty('end'))
 		config.end = 0;
 
-	if (!config.sortby)
-		config.sortby = 'on-cpu';
+	if (config.sortby && config.sortby != 'entity') {
+		if (!input.states[config.sortby]) {
+			fatal('cannot sort by state "%s": no such state',
+			    config.sortby);
+		}
 
-	for (i = 0; i < input.states.length; i++) {
-		if (input.states[i].name == config.sortby)
-			sortby = i;
+		sortby = input.states[config.sortby].value;
 	}
 
 	check(input, 'data');
@@ -457,22 +458,26 @@ var statemap = function (config, input)
 	var keys = Object.keys(maps);
 	var weight = {};
 
-	for (i = 0; i < keys.length; i++) {
-		var key = keys[i];
-		weight[key] = 0;
+	if (sortby != -1) {
+		for (i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			weight[key] = 0;
 
-		for (j = 0; j < maps[key].length; j++)
-			weight[key] += maps[key][j].states[sortby];
+			for (j = 0; j < maps[key].length; j++)
+				weight[key] += maps[key][j].states[sortby];
+		}
 	}
 
 	keys.sort(function (lhs, rhs) {
-		if (weight[lhs] < weight[rhs])
-			return (1);
+		if (sortby != -1) {
+			if (weight[lhs] < weight[rhs])
+				return (1);
 
-		if (weight[lhs] > weight[rhs])
-			return (-1);
+			if (weight[lhs] > weight[rhs])
+				return (-1);
+		}
 
-		return (0);
+		return (lhs.localeCompare(rhs, [], { numeric: true }));
 	});
 
 	var lmargin = 138, tmargin = 60;
@@ -613,9 +618,13 @@ var main = function ()
 		type: 'number',
 		help: 'coalesce target'
 	}, {
-		names: [ 'stripHeight', 's' ],
+		names: [ 'stateHeight', 'h' ],
 		type: 'number',
-		help: 'height of each state strip, in pixels'
+		help: 'height of each state, in pixels'
+	}, {
+		names: [ 'sortby', 's' ],
+		type: 'string',
+		help: 'state to sort by (defaults to entity name)'
 	} ];
 
 	mod_dashdash.addOptionType({
@@ -669,8 +678,11 @@ var main = function ()
 	if (opts.coalesce)
 		config.maxrect = opts.coalesce;
 
-	if (opts.stripHeight)
-		config.stripHeight = Math.floor(opts.stripHeight);
+	if (opts.stateHeight)
+		config.stripHeight = Math.floor(opts.stateHeight);
+
+	if (opts.sortby)
+		config.sortby = opts.sortby;
 
 	file = opts._args[0];
 
