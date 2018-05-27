@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
- * Copyright 2017, Joyent, Inc.
+ * Copyright 2018, Joyent, Inc.
  */
 
 var mod_fs = require('fs');
@@ -48,8 +48,16 @@ var out = function ()
 
 var rectWidth = function (map, index, config)
 {
-	return ((map[index].duration / config.timeWidth) *
-	    config.pixelWidth);
+	/*
+	 * We add a fuzz factor to our width to assure it will always be
+	 * nearly (but not quite!) half a pixel wider than it should be.
+	 * This assures that none of the background (which is deliberately a
+	 * bright color) comes through at the border of rectangles, without
+	 * losing any accuracy (the next rectangle will tile over ours at
+	 * an unadjusted offset).
+	 */
+	return ((((map[index].duration) / config.timeWidth) *
+	    config.pixelWidth) + 0.4);
 };
 
 var stateColors = function (states)
@@ -86,6 +94,42 @@ var stateColors = function (states)
 	}
 };
 
+var addTag = function (config, datum)
+{
+	if (!datum.json)
+		fatal('tag missing json: >>>%s<<<', dump(datum));
+
+	var payload = JSON.parse(datum.json);
+	var tag = payload.tag;
+
+	if (!tag) {
+		if (!datum.hasOwnProperty('name') ||
+		    !datum.hasOwnProperty('state')) {
+			fatal('malformed tag: >>>%s<<<', dump(datum));
+		}
+
+		payload = { tag: datum.name, state: datum.state };
+	}
+
+	config.tags[datum.index] = payload;
+};
+
+var copyTags = function (datum, d)
+{
+	var i, ratio;
+
+	if (!datum.tags)
+		return;
+
+	d.g = {};
+
+	for (i = 0; i < datum.tags.length; i++) {
+		ratio = datum.tags[i].duration / datum.duration;
+
+		d.g[datum.tags[i].tag] = Math.round(ratio * 1000) / 1000;
+	}
+};
+
 var outputMap = function (map, config)
 {
 	var i;
@@ -96,9 +140,9 @@ var outputMap = function (map, config)
 
 	for (i = 0; i < map.length; i++) {
 		var w = rectWidth(map, i, config);
-		var datum = map[i];
+		var datum = map[i], d;
 		var state = -1;
-		var x, color, idx, j;
+		var x, color, idx, j, ratio;
 
 		if (w === 0)
 			continue;
@@ -119,10 +163,13 @@ var outputMap = function (map, config)
 
 			idx = data.length;
 
-			data.push({
+			d = {
 				t: datum.time,
 				s: state
-			});
+			};
+
+			copyTags(datum, d);
+			data.push(d);
 
 			out('<rect x="' + x + '" y="%d" width="' + w + '" ' +
 			    'height="%d" onclick="mapclick(evt, ' +
@@ -142,13 +189,15 @@ var outputMap = function (map, config)
 
 		color = config.states[max].color;
 
-		var d = {
+		d = {
 			t: datum.time,
 			s: {}
 		};
 
+		copyTags(datum, d);
+
 		for (j = 0; j < datum.states.length; j++) {
-			var ratio = 0;
+			ratio = 0;
 
 			if (datum.states[j]) {
 				ratio = datum.states[j] / datum.duration;
@@ -298,10 +347,10 @@ var outputControls = function (props)
 	var iprops = { x: 0, y: 0, width: width, height: width };
 
 	var icons = [
-	    [ 'arrow-left-l', 'pan(50, 0)' ],
-	    [ 'zoom-in', 'zoom(1.25)' ],
-	    [ 'zoom-out', 'zoom(0.8)' ],
-	    [ 'arrow-right-l', 'pan(-50, 0)' ]
+	    [ 'arrow-left-l', 'panclick(50, 0)' ],
+	    [ 'zoom-in', 'zoomclick(1.25)' ],
+	    [ 'zoom-out', 'zoomclick(0.8)' ],
+	    [ 'arrow-right-l', 'panclick(-50, 0)' ]
 	];
 
 	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
@@ -319,20 +368,21 @@ var outputLegend = function (props, states)
 {
 	var x = props.x;
 	var y = props.y;
-	var height = props.height;
+	var height = props.lheight;
 	var width = props.width;
 
 	for (var state in states) {
 		out('<rect x="%d" y="%d" width="%d" height="%d" ' +
-		    'id="statemap-legend-%s" ' +
+		    'id="statemap-legend-%s" onclick="legendclick(evt, %d)" ' +
 		    'class="statemap-legend" style="fill:%s" />',
-		    x, y, width, height, state, states[state].color);
-		y += height + 10;
+		    x, y, width, height, state, state,
+		    states[state].color);
+		y += height + props.spacing;
 
 		out('<text x="%d" y="%d" class="statemap-legendlabel ' +
 		    'sansserif">%s</text>', x + (width / 2), y,
 		    states[state].name);
-		y += 10;
+		y += props.spacing;
 	}
 };
 
@@ -414,14 +464,16 @@ var statemap = function (config, input)
 	}
 
 	for (state in input.states) {
-		if (input.states[state].hasOwnProperty('value')) {
-			value = input.states[state].value;
-		} else {
-			value = state;
-		}
+		if (!input.states[state].hasOwnProperty('value'))
+			fatal('state %s missing value', state);
+
+		value = input.states[state].value;
 
 		states[value] = input.states[state];
 		states[value].name = state;
+
+		if (config.tags && !config.tags[value])
+			config.tags[value] = {};
 	}
 
 	stateColors(states);
@@ -480,32 +532,48 @@ var statemap = function (config, input)
 		return (lhs.localeCompare(rhs, [], { numeric: true }));
 	});
 
-	var lmargin = 138, tmargin = 60;
+	var lmargin = config.legendWidth, tmargin = 60;
+	var rmargin = config.tagWidth;
 
 	var height = (keys.length * config.stripHeight) + tmargin;
-	var width = config.stripWidth;
+	var width = config.stripWidth + lmargin + rmargin;
 
-	out('<?xml version="1.0"?>');
-	out('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"');
-	out('"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">');
-	out('<svg width="%d" height="%d"', width, height);
-	out('  xmlns="http://www.w3.org/2000/svg"');
-	out('  version="1.1"');
-	out('  onload="init(evt)">');
+	var props = { x: 20, y: tmargin, height: 45,
+	    width: lmargin, lheight: 15, spacing: 10 };
 
-	config.pixelWidth = width - lmargin;
+	var lheight = tmargin + props.height + (Object.keys(states).length *
+	    (props.lheight + (props.spacing * 2)));
+
+	config.pixelWidth = config.stripWidth;
 	config.pixelHeight = height - tmargin;
+	config.totalHeight = height > lheight ? height : lheight;
 	config.timeWidth = timeWidth;
 	config.states = states;
 	config.y = 0;
 	config.lmargin = lmargin;
 	config.tmargin = tmargin;
 
+	out('<?xml version="1.0"?>');
+	out('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"');
+	out('"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">');
+	out('<svg width="%d" height="%d"', width, config.totalHeight);
+	out('  xmlns="http://www.w3.org/2000/svg"');
+	out('  version="1.1"');
+	out('  onload="init(evt)">');
+
 	loadLibs(config);
 
 	out('<svg x="%dpx" y="%dpx" width="%dpx" height="%dpx">\n',
 	    lmargin, tmargin, config.pixelWidth, height - tmargin);
 
+	/*
+	 * First, we drop down a white rectangle as big as our SVG.  This
+	 * color will be changed dynamically to be a highlight color, and
+	 * then rectangles can be made transparent to become highlighted.
+	 */
+	out('<rect x="0px" y="0px" width="%dpx" height="%dpx" ' +
+	    'fill="%s" id="statemap-highlight" />\n',
+	    config.pixelWidth, height - tmargin, mod_color('white'));
 	out('<g id="statemap" transform="matrix(1 0 0 1 0 0)">');
 
 	var map = {};
@@ -543,14 +611,17 @@ var statemap = function (config, input)
 	    lmargin + config.pixelWidth - 10, 40);
 	out('class="statemap-timeline" />');
 
-	var props = { x: 20, y: tmargin, height: 45, width: lmargin };
 	props.width -= (2 * props.x) + 10;
 
 	outputControls(props);
 
 	props.y += props.height;
-	props.height = 15;
 	outputLegend(props, states);
+
+	if (config.tagWidth != 0) {
+		out('<g id="statemap-tagbox"></g>\n');
+		out('<g id="statemap-tagbox-select"></g>\n');
+	}
 
 	out('<!-- %j !-->', states);
 	out('<!-- coalesced: %d !-->', config.coalesced);
@@ -597,7 +668,9 @@ var main = function ()
 		begin: 0,
 		end: 0,
 		stripHeight: 10,
-		stripWidth: 1000,
+		legendWidth: 138,
+		stripWidth: 862,
+		tagWidth: 250,
 		libs: [ 'statemap-svg.js' ]
 	};
 
@@ -617,6 +690,10 @@ var main = function ()
 		names: [ 'coalesce', 'c' ],
 		type: 'number',
 		help: 'coalesce target'
+	}, {
+		names: [ 'ignoreTags', 'i' ],
+		type: 'bool',
+		help: 'ignore tags in input'
 	}, {
 		names: [ 'stateHeight', 'h' ],
 		type: 'number',
@@ -684,6 +761,13 @@ var main = function ()
 	if (opts.sortby)
 		config.sortby = opts.sortby;
 
+	if (opts.ignoreTags) {
+		config.notags = 1;
+		config.tagWidth = 0;
+	} else {
+		config.tags = [];
+	}
+
 	file = opts._args[0];
 
 	stream = mod_fs.createReadStream(file).pipe(mod_concatjson.parse());
@@ -699,6 +783,11 @@ var main = function ()
 		obj.data = [];
 
 		config.coalesced = mod_statemap.ingest(file, function (datum) {
+			if (!datum.hasOwnProperty('entity')) {
+				addTag(config, datum);
+				return;
+			}
+
 			obj.data.push(datum);
 		}, config);
 

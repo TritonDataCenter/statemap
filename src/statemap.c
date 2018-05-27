@@ -249,6 +249,66 @@ statemap_json_end(statemap_t *statemap, char *ptr, const char *lim)
 	return (ptr);
 }
 
+statemap_tagdef_t *
+statemap_tagdef_lookup(statemap_t *statemap, int state,
+    jsmntok_t *tok, char *base)
+{
+	int hash = statemap_tokhash(tok, base);
+	statemap_tagdef_t *tagdef, **tp;
+
+	tp = &statemap->sm_taghash[hash % STATEMAP_TAGDEF_HASHSIZE];
+
+	for (tagdef = *tp; tagdef != NULL; tagdef = tagdef->smtd_hashnext) {
+		if (tagdef->smtd_state != state)
+			continue;
+
+		if (statemap_tokstrcmp(tok, base, tagdef->smtd_name) == 0)
+			return (tagdef);
+	}
+
+	/*
+	 * We don't have our tag definition in the hash table; create one.
+	 */
+	if ((tagdef = malloc(sizeof (statemap_tagdef_t))) == NULL) {
+		statemap_error(statemap, "failed to allocated tag definition "
+		    " for \"%s\"", statemap_tokstr(tok, base));
+		return (NULL);
+	}
+
+	bzero(tagdef, sizeof (statemap_tagdef_t));
+	tagdef->smtd_name = strndup(&base[tok->start], tok->end - tok->start);
+	tagdef->smtd_state = state;
+
+	if (tagdef->smtd_name == NULL) {
+		statemap_error(statemap, "failed to allocated name for "
+		    "tag definition \"%s\"", statemap_tokstr(tok, base));
+		free(tagdef);
+		return (NULL);
+	}
+
+	tagdef->smtd_hashnext = *tp;
+	*tp = tagdef;
+
+	/*
+	 * We add our tag definition to the end of our linked list to assure
+	 * that they are in smtd_index order.
+	 */
+	tagdef->smtd_next = NULL;
+	tagdef->smtd_index = statemap->sm_ntagdefs++;
+
+	if (statemap->sm_tagdefs != NULL) {
+		assert(tagdef->smtd_index > 0);
+		statemap->sm_taglast->smtd_next = tagdef;
+	} else {
+		assert(tagdef->smtd_index == 0);
+		statemap->sm_tagdefs = tagdef;
+	}
+
+	statemap->sm_taglast = tagdef;
+
+	return (tagdef);
+}
+
 statemap_entity_t *
 statemap_entity_lookup(statemap_t *statemap, jsmntok_t *tok, char *base)
 {
@@ -388,15 +448,50 @@ statemap_destroy(statemap_t *statemap)
 {
 	statemap_entity_t *entity, *next;
 	statemap_rect_t *rect, *nextr;
+	statemap_tag_t *tag, *nextt;
+	statemap_tagdef_t *tagdef, *nextdef;
 
+	/*
+	 * Free our entities, for each one freeing rectangles and tags.
+	 */
 	for (entity = statemap->sm_entities; entity != NULL; entity = next) {
 		for (rect = entity->sme_first; rect != NULL; rect = nextr) {
+			for (tag = rect->smr_tags; tag != NULL; tag = nextt) {
+				nextt = tag->smt_next;
+				free(tag);
+			}
+
 			nextr = rect->smr_next;
 			free(rect);
 		}
 
+		free(entity->sme_name);
+		free(entity->sme_description);
 		next = entity->sme_next;
 		free(entity);
+	}
+
+	/*
+	 * Now free our freelists, both rectangles and tags.
+	 */
+	for (rect = statemap->sm_freerect; rect != NULL; rect = nextr) {
+		nextr = rect->smr_next;
+		free(rect);
+	}
+
+	for (tag = statemap->sm_freetag; tag != NULL; tag = nextt) {
+		nextt = tag->smt_next;
+		free(tag);
+	}
+
+	/*
+	 * Finally, free our tag definitions.
+	 */
+	for (tagdef = statemap->sm_tagdefs; tagdef != NULL; tagdef = nextdef) {
+		free(tagdef->smtd_name);
+		free(tagdef->smtd_json);
+		nextdef = tagdef->smtd_next;
+		free(tagdef);
 	}
 
 	free(statemap);
@@ -569,13 +664,14 @@ statemap_ingest_newrect(statemap_t *statemap,
 	statemap_rect_t *rect;
 	statemap_rect_t *victim, *survivor, *left;
 	avl_tree_t *rects = &statemap->sm_rects;
+	statemap_tag_t *tag, *vtag, *stag, *next, **tailp;
 	int i;
 
 	/*
 	 * We have a new rectangle!  Grab one off the freelist (if there is
 	 * one) and fill it in.
 	 */
-	if (statemap->sm_freerect) {
+	if (statemap->sm_freerect != NULL) {
 		rect = statemap->sm_freerect;
 		statemap->sm_freerect = rect->smr_next;
 	} else {
@@ -590,6 +686,26 @@ statemap_ingest_newrect(statemap_t *statemap,
 	rect->smr_duration = time - entity->sme_start;
 	rect->smr_states[entity->sme_state] = rect->smr_duration;
 	rect->smr_entity = entity;
+
+	if (entity->sme_tagdef != NULL) {
+		if (statemap->sm_freetag != NULL) {
+			tag = statemap->sm_freetag;
+			statemap->sm_freetag = tag->smt_next;
+		} else {
+			if ((tag = malloc(sizeof (statemap_tag_t))) == NULL) {
+				statemap_error(statemap,
+				    "couldn't allocate new tag");
+				return (-1);
+			}
+		}
+
+		tag->smt_def = entity->sme_tagdef;
+		tag->smt_duration = rect->smr_duration;
+		tag->smt_next = NULL;
+		rect->smr_tags = tag;
+
+		entity->sme_tagdef = NULL;
+	}
 
 	/*
 	 * And now link it on to the list of rectangles for this entity.
@@ -669,6 +785,66 @@ statemap_ingest_newrect(statemap_t *statemap,
 	}
 
 	/*
+	 * Iterate over both the victim's tags and the survivor's tags (which
+	 * are kept sorted by their definition's address, from lowest to
+	 * highest), and coalesce matching tags.
+	 */
+	vtag = victim->smr_tags;
+	stag = survivor->smr_tags;
+	tailp = &survivor->smr_tags;
+
+	while (vtag != NULL) {
+		if (stag == NULL) {
+			/*
+			 * We are out of survivor tags; we want to just take
+			 * the entire (remaining) victim tag list and link it
+			 * into the survivor -- and we're done.
+			 */
+			*tailp = vtag;
+			break;
+		}
+
+		if (vtag->smt_def < stag->smt_def) {
+			/*
+			 * We have a tag that is present in the victim that
+			 * isn't present in the survivor; we need to link it
+			 * in to the survivor, and then increment our vtag and
+			 * continue.
+			 */
+			*tailp = vtag;
+			next = vtag->smt_next;
+			vtag->smt_next = stag;
+			tailp = &vtag->smt_next;
+			vtag = next;
+			continue;
+		}
+
+		if (vtag->smt_def == stag->smt_def) {
+			/*
+			 * We have a tag that is present in both the victim
+			 * and the survivor; coalesce them, and free the
+			 * victim's tag.
+			 */
+			stag->smt_duration += vtag->smt_duration;
+
+			next = vtag->smt_next;
+			vtag->smt_next = statemap->sm_freetag;
+			statemap->sm_freetag = vtag;
+			vtag = next;
+		}
+
+		/*
+		 * We have either (1) a tag that is present in both the
+		 * survivor and the victim (in which case the victim's was
+		 * just coalesced into the survivor's, above) or (2) a tag
+		 * that is present only in the survivor.  In either case, we
+		 * want to increment our survivor tag.
+		 */
+		tailp = &stag->smt_next;
+		stag = stag->smt_next;
+	}
+
+	/*
 	 * Now we need to actually eliminate the victim, updating the survivor
 	 * and its neighbors appropriately.
 	 */
@@ -728,17 +904,19 @@ int
 statemap_ingest_data(statemap_t *statemap, char *base, long len)
 {
 	jsmn_parser parser;
-	jsmntok_t tok[10];
+	jsmntok_t tok[128];
 	jsmntok_t *timetok = NULL, *entitytok = NULL, *statetok = NULL;
-	jsmntok_t *eventtok = NULL, *descrtok = NULL;
+	jsmntok_t *eventtok = NULL, *descrtok = NULL, *tagtok = NULL;
 	statemap_entity_t *entity;
+	statemap_tagdef_t *tagdef = NULL;
 	int ntok, i;
 	long long time;
 	int state;
 
 	jsmn_init(&parser);
 
-	ntok = jsmn_parse(&parser, base, len, tok, 10);
+	ntok = jsmn_parse(&parser, base, len, tok,
+	    sizeof (tok) / sizeof (tok[0]));
 
 	if (ntok == JSMN_ERROR_NOMEM) {
 		statemap_error(statemap, "JSON data at line %d contains "
@@ -772,17 +950,60 @@ statemap_ingest_data(statemap_t *statemap, char *base, long len)
 		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_ENTITY, entitytok)
 		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_TIME, timetok)
 		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_STATE, statetok)
+		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_TAG, tagtok)
 		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_EVENT, eventtok)
 		STATEMAP_INGEST_CHECKTOK(STATEMAP_DATA_DESCRIPTION, descrtok)
 	}
 
-	/*
-	 * Every datum must have an entity.
-	 */
 	if (entitytok == NULL) {
-		statemap_error(statemap, "illegal datum on line %d: missing "
-		    "\"%s\" field\n", statemap->sm_line, STATEMAP_DATA_ENTITY);
-		return (-1);
+		/*
+		 * The only data that will be missing an entity will be those
+		 * describing a state tag.
+		 */
+		if (tagtok == NULL) {
+			statemap_error(statemap, "?missing \"%s\" field\n",
+			    STATEMAP_DATA_ENTITY);
+			return (-1);
+		}
+
+		if (statetok == NULL) {
+			statemap_error(statemap, "?tag definition missing "
+			    "\"%s\" field\n", STATEMAP_DATA_STATE);
+			return (-1);
+		}
+
+		if ((state = statemap_tokint(statetok, base)) == -1 ||
+		    state >= statemap->sm_nstates) {
+			statemap_error(statemap, "?illegal state value in "
+			    "definition for tag \"%s\"",
+			    statemap_tokstr(statetok, base));
+			return (-1);
+		}
+
+		if (statemap->sm_config.smc_notags)
+			return (0);
+
+		/*
+		 * For this state, lookup the tag (creating it if it doesn't
+		 * already exist) and copy the entire JSON into it.
+		 */
+		tagdef = statemap_tagdef_lookup(statemap, state, tagtok, base);
+
+		if (tagdef == NULL)
+			return (-1);
+
+		if (tagdef->smtd_json != NULL) {
+			free(tagdef->smtd_json);
+			tagdef->smtd_json = NULL;
+		}
+
+		if ((tagdef->smtd_json = strndup(base, len)) == NULL) {
+			statemap_error(statemap, "failed to allocate JSON "
+			    "payload for tag definition \"%s\"",
+			    statemap_tokstr(statetok, base));
+		}
+
+		return (0);
 	}
 
 	/*
@@ -852,6 +1073,16 @@ statemap_ingest_data(statemap_t *statemap, char *base, long len)
 		return (-1);
 	}
 
+	if (tagtok != NULL && !statemap->sm_config.smc_notags) {
+		/*
+		 * We have a tag; look it up.
+		 */
+		tagdef = statemap_tagdef_lookup(statemap, state, tagtok, base);
+
+		if (tagdef == NULL)
+			return (-1);
+	}
+
 	if (entity->sme_start < 0) {
 		/*
 		 * This is the first state we have seen for this entity; we
@@ -860,6 +1091,7 @@ statemap_ingest_data(statemap_t *statemap, char *base, long len)
 		 */
 		entity->sme_start = time;
 		entity->sme_state = state;
+		entity->sme_tagdef = tagdef;
 		return (0);
 	}
 
@@ -872,6 +1104,7 @@ statemap_ingest_data(statemap_t *statemap, char *base, long len)
 	if (time == entity->sme_start) {
 		statemap->sm_nelisions++;
 		entity->sme_state = state;
+		entity->sme_tagdef = tagdef;
 		return (0);
 	}
 
@@ -892,6 +1125,7 @@ statemap_ingest_data(statemap_t *statemap, char *base, long len)
 	 */
 	entity->sme_start = time;
 	entity->sme_state = state;
+	entity->sme_tagdef = tagdef;
 
 	return (0);
 }

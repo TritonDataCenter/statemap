@@ -1,3 +1,7 @@
+/*
+ * Copyright 2018 Joyent, Inc.
+ */
+
 #include <node.h>
 #include <string>
 #include <strings.h>
@@ -11,6 +15,37 @@ using v8::Local;
 using v8::Object;
 using v8::String;
 using v8::Value;
+
+static void
+ingestEmitTags(const FunctionCallbackInfo<Value>& args, statemap_t *statemap)
+{
+	Isolate *isolate = args.GetIsolate();
+	const unsigned argc = 1;
+	statemap_tagdef_t *tagdef;
+
+	if (statemap->sm_tagdefs == NULL)
+		return;
+
+	Local<String> name = String::NewFromUtf8(isolate, "name");
+	Local<String> state = String::NewFromUtf8(isolate, "state");
+	Local<String> index = String::NewFromUtf8(isolate, "index");
+	Local<String> json = String::NewFromUtf8(isolate, "json");
+	Local<v8::Function> cb = Local<v8::Function>::Cast(args[1]);
+
+	for (tagdef = statemap->sm_tagdefs; tagdef != NULL;
+	    tagdef = tagdef->smtd_next) {
+		Local<Object> obj = Object::New(isolate);
+
+		obj->Set(name, String::NewFromUtf8(isolate, tagdef->smtd_name));
+		obj->Set(state, v8::Number::New(isolate, tagdef->smtd_state));
+		obj->Set(index, v8::Number::New(isolate, tagdef->smtd_index));
+		obj->Set(json, String::NewFromUtf8(isolate,
+		    tagdef->smtd_json != NULL ? tagdef->smtd_json : "{}"));
+
+		Local<Value> argv[argc] = { obj };
+		cb->Call(Null(isolate), argc, argv);
+	}
+}
 
 static int
 ingestEmitEntity(const FunctionCallbackInfo<Value>& args,
@@ -27,6 +62,8 @@ ingestEmitEntity(const FunctionCallbackInfo<Value>& args,
 	Local<String> states = String::NewFromUtf8(isolate, "states");
 	Local<String> ent = String::NewFromUtf8(isolate, "entity");
 	Local<String> name = String::NewFromUtf8(isolate, entity->sme_name);
+	Local<String> tags = String::NewFromUtf8(isolate, "tags");
+	Local<String> tagstr = String::NewFromUtf8(isolate, "tag");
 
 	if (entity->sme_description != NULL) {
 		Local<Object> obj = Object::New(isolate);
@@ -54,6 +91,26 @@ ingestEmitEntity(const FunctionCallbackInfo<Value>& args,
 		for (i = 0; i < statemap->sm_nstates; i++) {
 			arr->Set(v8::Number::New(isolate, i),
 			    v8::Number::New(isolate, rect->smr_states[i]));
+		}
+
+		if (rect->smr_tags != NULL) {
+			Local<v8::Array> tarr = v8::Array::New(isolate);
+			statemap_tag_t *tag;
+
+			for (tag = rect->smr_tags, i = 0; tag != NULL;
+			    tag = tag->smt_next, i++) {
+				Local<Object> tobj = Object::New(isolate);
+
+				tobj->Set(tagstr, v8::Number::New(isolate,
+				    tag->smt_def->smtd_index));
+
+				tobj->Set(duration, v8::Number::New(isolate,
+				    tag->smt_duration));
+
+				tarr->Set(v8::Number::New(isolate, i), tobj);
+			}
+
+			obj->Set(tags, tarr);
 		}
 		
 		Local<Value> argv[argc] = { obj };
@@ -83,6 +140,7 @@ loadConfig(Isolate *isolate, statemap_config_t *config, Local<Object> obj)
 	LOADCONFIG_INTFIELD(maxrect);
 	LOADCONFIG_INTFIELD(begin);
 	LOADCONFIG_INTFIELD(end);
+	LOADCONFIG_INTFIELD(notags);
 
 	return (0);
 }
@@ -143,6 +201,8 @@ ingest(const FunctionCallbackInfo<Value>& args)
 		statemap_destroy(statemap);
 		return;
 	}
+
+	ingestEmitTags(args, statemap);
 
 	for (entity = statemap->sm_entities; entity != NULL;
 	    entity = entity->sme_next) {

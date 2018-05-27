@@ -39,6 +39,12 @@ as input to the `statemap` command:
 <td>CPU activity by CPU</td>
 </tr>
 <tr>
+<td><a href="./contrib/cpu-statemap-tagged.d">cpu-statemap-tagged.d</a></td>
+<td>DTrace</td>
+<td>SmartOS</td>
+<td>CPU activity by CPU, tagged by origin of activity</td>
+</tr>
+<tr>
 <td><a href="./contrib/io-statemap.d">io-statemap.d</a></td>
 <td>DTrace</td>
 <td>SmartOS</td>
@@ -72,8 +78,7 @@ concatenated JSON.
 The expectation is that one JSON payload will consist of
 metadata, with many JSON payloads containing data, but the metadata may
 be split across multiple JSON payloads.  (No field can appear more than
-once, however.)  Alternatively, the data and metadata can be combined
-in a single large payload; see `data` member, below.
+once, however.)
 
 #### Metadata
 
@@ -123,6 +128,53 @@ datum is a JSON object that must contain the following members:
 
 - `state`: The value of the state that begins at the time of the datum.
 
+Each datum may also contain an additional member:
+
+- `tag`: The tag for the state.  See State tagging, below.
+
+#### State tagging
+
+It is often helpful to examine additional dimensionality within a particular
+state or states.  For example, in understanding CPU activity, it may be
+helpful to understand not just that a CPU was in a state in which it was
+executing a user thread, but the nature of the thread itself:  the thread
+identifier, process identifier, process name, and so on.  To facilitate this,
+statemaps support *state tagging* whereby an immutable tag is associated with a
+particular transition to a particular state.  There can be an arbitrary
+number of such tags, but the expectation is that there are many more state
+transitions than there are tags.  Tags are indicated by the `tag` member of
+the state datum payload.  Elsewhere in the stream of data (though not
+necessarily before the tag is used), the tag should be defined with
+a tag-defining JSON payload that contains the following two members:
+
+- `tag`: A string that is the tag that is being defined.
+
+- `state`: The state that corresponds to this tag.  Each `state`/`tag` tuple
+  must have its own tag definition.
+
+Beyond these two members, the tag definition can have any number of scalar
+members.  Tags are immutable; if a tag is redefined, the last tag definition
+will apply to all uses of that tag.  The tag should not contain member
+definitions that would cause it to be ambiguous with respect to data (namely,
+`entity` and `time` members).
+
+As an example, here is a tag definition for a state that is associated with
+interrupt activity that indicates the source device:
+
+```
+{ "state": 6, "tag": "ffffd0c4f8f52000", "driver": "mpt_sas", "instance": 1 }
+```
+
+And here is an example of a tagged state datum:
+
+```
+{ "time": "1579579142", "entity": "55", "state": 6, "tag": "ffffd0c4f8f52000" }
+```
+
+This would indicate that at time 1579579142, entity 55 went into state 6 --
+and the tag for this state (in this case, the interrupting device) was
+instance 1 of the `mpt_sas` driver.
+
 ## Rendering
 
 To render a statemap, run the `statemap` command, providing an instrumentation
@@ -169,6 +221,10 @@ may be expressed in floating point with an optional suffix (e.g.,
 
 - `-h` (`--stateHeight`): The height (in pixels) of each state in the
 statemap.
+
+- `-i` (`--ignoreTags`): Ignore tags in the input, acting as if each state
+is untagged. (This will result in shorter run-time and a smaller resulting
+SVG.)
 
 - `-s` (`--stateHeight`): The height (in pixels) of each state in the
 statemap.
