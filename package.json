@@ -1,7 +1,7 @@
 {
 	"name": "statemap",
 	"description": "Facility to generate statemaps, a visualization of state over time",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"license": "MIT",
 	"author": "Joyent (joyent.com)",
 	"dependencies": {
