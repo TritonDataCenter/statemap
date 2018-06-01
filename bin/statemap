@@ -132,8 +132,23 @@ var copyTags = function (datum, d)
 
 var outputMap = function (map, config)
 {
-	var i;
+	var i, x;
 	var data = [];
+
+	/*
+	 * Output an initial rect that covers the highlight color with our
+	 * background color for the time before for the first state.
+	 */
+	if (map.length > 0) {
+		x = (((map[0].time - config.begin) /
+		    config.timeWidth) * config.pixelWidth);
+	} else {
+		x = config.pixelWidth;
+	}
+
+	out('<rect x="0" y="%d" width="' + x + '" ' +
+	    'height="%d" style="fill:%s" />',
+	    config.y, config.stripHeight, mod_color(config.background));
 
 	out('<g id="%s%s"><title>%s %s</title>', config.entityPrefix,
 	    config.entity, config.entityKind, config.entity);
@@ -142,7 +157,7 @@ var outputMap = function (map, config)
 		var w = rectWidth(map, i, config);
 		var datum = map[i], d;
 		var state = -1;
-		var x, color, idx, j, ratio;
+		var color, idx, j, ratio;
 
 		if (w === 0)
 			continue;
@@ -567,13 +582,13 @@ var statemap = function (config, input)
 	    lmargin, tmargin, config.pixelWidth, height - tmargin);
 
 	/*
-	 * First, we drop down a white rectangle as big as our SVG.  This
+	 * First, we drop down a background rectangle as big as our SVG.  This
 	 * color will be changed dynamically to be a highlight color, and
 	 * then rectangles can be made transparent to become highlighted.
 	 */
 	out('<rect x="0px" y="0px" width="%dpx" height="%dpx" ' +
 	    'fill="%s" id="statemap-highlight" />\n',
-	    config.pixelWidth, height - tmargin, mod_color('white'));
+	    config.pixelWidth, height - tmargin, mod_color(config.background));
 	out('<g id="statemap" transform="matrix(1 0 0 1 0 0)">');
 
 	var map = {};
@@ -671,7 +686,8 @@ var main = function ()
 		legendWidth: 138,
 		stripWidth: 862,
 		tagWidth: 250,
-		libs: [ 'statemap-svg.js' ]
+		libs: [ 'statemap-svg.js' ],
+		background: '#f0f0f0'
 	};
 
 	var opts = [ {
