@@ -66,7 +66,13 @@ as input to the `statemap` command:
 <td><a href="./contrib/postgres-statemap.d">postgres-statemap.d</a></td>
 <td>DTrace</td>
 <td>SmartOS</td>
-<td>Postgres processes</td>
+<td>PostgreSQL processes</td>
+</tr>
+<tr>
+<td><a href="./contrib/postgres-zfs-statemap.d">postgres-zfs-statemap.d</a></td>
+<td>DTrace</td>
+<td>SmartOS</td>
+<td>PostgreSQL processes, with ZFS-specific states</td>
 </tr>
 </table>
 
