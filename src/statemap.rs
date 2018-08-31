@@ -572,12 +572,12 @@ impl StatemapEntity {
         println!(r##"<g id="{}{}"><title>{} {}</title>"##,
             globals.entityPrefix, self.name, globals.entityKind, self.name);
 
-        for i in 0..map.len() {
-            let rect = self.rects.get(&map[i]).unwrap().borrow();
+        for e in map {
+            let rect = self.rects.get(&e).unwrap().borrow();
             let mut state = None;
             let mut blended = false;
 
-            x = ((map[i] - globals.begin) as f64 /
+            x = ((e - globals.begin) as f64 /
                 globals.timeWidth as f64) * globals.pixelWidth as f64;
 
             for j in 0..rect.states.len() {
@@ -765,14 +765,11 @@ impl Statemap {
 
         assert_eq!(first, Some('{'));
 
-        let mut idx: usize = 0;
         let mut notinstring = 1;
         let mut backslashed = false;
         let mut depth = 1;
 
-        for c in iter {
-            idx += 1;
-
+        for (idx, c) in iter.enumerate() {
             if c == '\n' {
                 self.line += 1;
             }
@@ -831,13 +828,13 @@ impl Statemap {
     fn apply(&mut self, updates: Vec<(u64, u64, Option<u64>)>,
         rweight: &mut StatemapRectWeight)
     {
-        for i in 0..updates.len() {
-            rweight.start = updates[i].0;
-            rweight.weight = updates[i].1;
+        for (s, w, d) in updates {
+            rweight.start = s;
+            rweight.weight = w;
 
             self.byweight.remove(rweight);
 
-            match updates[i].2 {
+            match d {
                 Some(delta) => {
                     rweight.weight += delta;
                     self.byweight.insert(*rweight);
@@ -1074,9 +1071,7 @@ impl Statemap {
         /*
          * We have verified our states; now pull them into our array.
          */
-        for _i in 0..nstates {
-            self.states.push(states.remove(0).unwrap());
-        }
+        self.states.extend(states.into_iter().map(|e| e.unwrap()));
 
         self.metadata = Some(metadata);
 
@@ -1538,15 +1533,15 @@ impl Statemap {
          */
         let mut colors: Vec<StatemapColor> = vec![];
 
-        for i in 0..self.states.len() {
-            match self.states[i].color {
+        for st in &self.states {
+            match st.color {
                 Some(ref name) => {
                     match StatemapColor::from_str(name) {
                         Ok(color) => colors.push(color),
                         Err(_err) => {
                             return self.err(&format!(concat!("illegal color",
                                 "\"{}\" for state \"{}\""), name,
-                                self.states[i].name));
+                                st.name));
                         }
                     }
                 }
