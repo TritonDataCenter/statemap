@@ -810,18 +810,14 @@ impl Statemap {
          * The lack of non-lexical lifetimes causes this code to be a bit
          * gnarlier than it should really have to be.
          */
-        if self.entities.contains_key(name) {
-            return match self.entities.get_mut(name) {
-                Some(entity) => { entity },
-                None => unreachable!()
-            };
-        }
+        let byid = &mut self.byid;
+        let entities = &mut self.entities;
 
-        let entity = StatemapEntity::new(name, self.byid.len());
-        self.byid.push(name.to_string());
-
-        self.entities.insert(name.to_string(), entity);
-        self.entities.get_mut(name).unwrap()
+        entities.entry(name.to_string()).or_insert_with(|| {
+            let entity = StatemapEntity::new(name, byid.len());
+            byid.push(name.to_string());
+            entity
+        })
     }
 
     /*
