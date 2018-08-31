@@ -35,7 +35,7 @@ fn usage(opts: Options) {
     ::std::process::exit(0);
 }
 
-fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
+fn parse_offset(optval: &str, opt: &str) -> u64 {
     fn parse_offset_val(val: &str) -> Option<u64> {
         let mut mult: u64 = 1;
         let mut num = val;
@@ -74,12 +74,6 @@ fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
             Ok(val) => Some(val * mult)
         }
     }
-
-    /*
-     * We can safely unwrap here because we should only be here if the option
-     * has been set.
-     */
-    let optval = matches.opt_str(opt).unwrap();
 
     match parse_offset_val(&optval) {
         Some(val) => val,
@@ -155,48 +149,36 @@ fn main() {
         usage(parser);
     }
 
-    let mut begin: u64 = 0;
-    let mut end: u64 = 0;
+    let bounds = (
+        matches.opt_str("duration").map(|v| parse_offset(&v, "duration")),
+        matches.opt_str("begin").map(|v| parse_offset(&v, "begin")),
+        matches.opt_str("end").map(|v| parse_offset(&v, "end")),
+    );
 
-    let has_duration = matches.opt_present("duration");
-    let has_begin = matches.opt_present("begin");
-    let has_end = matches.opt_present("end");
-
-    if has_duration {
-        let duration = parse_offset(&matches, "duration");
-
-        if has_begin {
-            if has_end {
-                fatal!("cannot specify all of begin, end, and duration");
-            } else {
-                begin = parse_offset(&matches, "begin");
-                end = begin + duration;
+    let (begin, end) = match bounds {
+        (Some(_), Some(_), Some(_)) => {
+            fatal!("cannot specify all of begin, end, and duration")
+        },
+        (Some(duration), None, None) => {
+            (0, duration)
+        },
+        (Some(duration), Some(begin), None) => {
+            (begin, begin + duration)
+        },
+        (Some(duration), None, Some(end)) => {
+            if duration > end {
+                fatal!("duration cannot exceed end offset");
             }
-        } else {
-            if has_end {
-                end = parse_offset(&matches, "end");
-
-                if duration > end {
-                    fatal!("duration cannot exceed end offset");
-                }
-
-                begin = end - duration;
-            } else {
-                end = duration;
-            }
-        }
-    } else {
-        if has_end {
-            end = parse_offset(&matches, "end")
-        }
-
-        if has_begin {
-            begin = parse_offset(&matches, "begin");
-            if end < begin {
+            (end - duration, end)
+        },
+        (None, b, e) => {
+            let (begin, end) = (b.unwrap_or(0), e.unwrap_or(0));
+            if e < b {
                 fatal!("begin offset must be less than end offset");
             }
+            (begin, end)
         }
-    }
+    };
 
     if matches.free.is_empty() {
         fatal!("must specify a data file");
