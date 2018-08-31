@@ -1482,19 +1482,17 @@ impl Statemap {
         let sort = match config.sortby {
             None => None,
             Some(ref sortby) => {
-                if metadata.states.contains_key(sortby) {
-                    Some(metadata.states.get(sortby).unwrap().value)
+                if let Some(st) = metadata.states.get(sortby) {
+                    Some(st.value)
+                } else if sortby == "entity" {
+                    /*
+                     * A state of "entity" denotes that we should sort
+                     * by entity name.
+                     */
+                    None
                 } else {
-                    if sortby == "entity" {
-                        /*
-                         * A state of "entity" denotes that we should sort
-                         * by entity name.
-                         */
-                        None
-                    } else {
-                        return self.err(&format!(concat!("cannot sort by ",
-                            "state \"{}\": no such state"), sortby));
-                    }
+                    return self.err(&format!(concat!("cannot sort by ",
+                        "state \"{}\": no such state"), sortby));
                 }
             }
         };
