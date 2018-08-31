@@ -141,8 +141,8 @@ struct StatemapSVGGlobals<'a> {
     timeWidth: u64,
     lmargin: u32,
     tmargin: u32,
-    states: &'a Vec<StatemapState>,
-    start: &'a Vec<u64>,
+    states: &'a [StatemapState],
+    start: &'a [u64],
     entityKind: &'a str,
 }
 
@@ -536,7 +536,7 @@ impl StatemapEntity {
 
     fn output_svg(&self, config: &StatemapSVGConfig,
         globals: &StatemapSVGGlobals,
-        colors: &Vec<StatemapColor>, y: u32) -> Vec<String>
+        colors: &[StatemapColor], y: u32) -> Vec<String>
     {
         let rect_width = |rect: &StatemapRect| -> f64 {
             /*
@@ -1442,7 +1442,7 @@ impl Statemap {
             println!("</svg>");
         };
 
-        let output_legend = |props: &Props, colors: &Vec<StatemapColor>| {
+        let output_legend = |props: &Props, colors: &[StatemapColor]| {
             let x = props.x;
             let mut y = props.y;
             let height = props.lheight;
