@@ -216,24 +216,21 @@ impl FromStr for StatemapColor {
     fn from_str(name: &str) -> Result<StatemapColor, StatemapError> {
         let named = palette::named::from_str(name);
 
-        match named {
-            Some(color) => {
-                let rgb = Srgb::<f32>::from_format(color);
+        if let Some(color) = named {
+            let rgb = Srgb::<f32>::from_format(color);
 
-                return Ok(StatemapColor {
-                    color: rgb.into_format().into_linear().into()
-                });
-            }
-            None => {}
+            return Ok(StatemapColor {
+                color: rgb.into_format().into_linear().into()
+            });
         }
 
-        if name.len() == 7 && name.chars().next().unwrap() == '#' {
+        if name.len() == 7 && name.starts_with('#') {
             let r = u8::from_str_radix(&name[1..3], 16);
             let g = u8::from_str_radix(&name[3..5], 16);
             let b = u8::from_str_radix(&name[5..7], 16);
 
-            if r.is_ok() && g.is_ok() && b.is_ok() {
-                let rgb = Srgb::new(r.unwrap(), g.unwrap(), b.unwrap());
+            if let (Ok(r), Ok(g), Ok(b)) = (r, g, b) {
+                let rgb = Srgb::new(r, g, b);
 
                 return Ok(StatemapColor {
                     color: rgb.into_format().into_linear().into()
@@ -328,19 +325,16 @@ impl StatemapEntity {
 
         rect.prev = self.last;
 
-        match self.last {
-            Some(last) => {
-                let mut lrect = self.rects.get(&last).unwrap().borrow_mut();
-                let old = lrect.weight;
+        lhs = self.last.map(|last| {
+            let mut lrect = self.rects.get(&last).unwrap().borrow_mut();
+            let old = lrect.weight;
 
-                lrect.next = Some(start);
-                rect.weight += lrect.duration;
-                lrect.weight += rect.duration;
+            lrect.next = Some(start);
+            rect.weight += lrect.duration;
+            lrect.weight += rect.duration;
 
-                lhs = Some((lrect.start, old, lrect.weight));
-            }
-            _ => { lhs = None; }
-        }
+            (lrect.start, old, lrect.weight)
+        });
 
         rhs = (rect.start, rect.weight);
         self.rects.insert(start, RefCell::new(rect));
@@ -458,14 +452,11 @@ impl StatemapEntity {
              * Set our subsumed next rectangle's previous to point back to us
              * rather than the subsumed rectangle.
              */
-            match s.next {
-                Some(next) => {
-                    self.rects.get(&next).unwrap()
-                        .borrow_mut().prev = Some(s.start);
-                }
-                None => {
-                    last = Some(s.start);
-                }
+            if let Some(next) = s.next {
+                self.rects.get(&next).unwrap()
+                    .borrow_mut().prev = Some(s.start);
+            } else {
+                last = Some(s.start);
             }
 
             /*
@@ -500,12 +491,9 @@ impl StatemapEntity {
         /*
          * Handle the left delta.
          */
-        match (deltas.0).0 {
-            Some(rect) => {
-                let delta = (deltas.0).1;
-                updates.push((rect, self.addto(rect, delta), Some(delta)));
-            }
-            None => {}
+        if let Some(rect) = (deltas.0).0 {
+            let delta = (deltas.0).1;
+            updates.push((rect, self.addto(rect, delta), Some(delta)));
         }
 
         /*
@@ -523,12 +511,9 @@ impl StatemapEntity {
         /*
          * And finally, the right delta.
          */
-        match (deltas.3).0 {
-            Some(rect) => {
-                let delta = (deltas.3).1;
-                updates.push((rect, self.addto(rect, delta), Some(delta)));
-            }
-            None => {}
+        if let Some(rect) = (deltas.3).0 {
+            let delta = (deltas.3).1;
+            updates.push((rect, self.addto(rect, delta), Some(delta)));
         }
 
         updates
@@ -837,12 +822,9 @@ impl Statemap {
 
             self.byweight.remove(rweight);
 
-            match updates[i].2 {
-                Some(delta) => {
-                    rweight.weight += delta;
-                    self.byweight.insert(*rweight);
-                }
-                None => {}
+            if let Some(delta) = updates[i].2 {
+                rweight.weight += delta;
+                self.byweight.insert(*rweight);
             }
         }
     }
@@ -1122,140 +1104,126 @@ impl Statemap {
 
         parsed = serde_json::from_str(payload);
 
-        match parsed {
-            Ok(datum) => { 
-                let time: u64;
-                let nstates: u32 = self.states.len() as u32;
+        if let Ok(datum) = parsed {
+            let time: u64;
+            let nstates: u32 = self.states.len() as u32;
 
-                match <u64>::from_str(&datum.time) {
-                    Ok(t) => time = t,
-                    _ => return self.err("?illegal time value")
-                }
+            if let Ok(t) = u64::from_str(&datum.time) {
+                time = t;
+            } else {
+                return self.err("?illegal time value");
+            }
 
-                /*
-                 * If the time of this datum is after our specified end time,
-                 * we have nothing further to do to process it.
-                 */
-                if self.config.end > 0 && time > self.config.end {
-                    return Ok(());
-                }
-
-                if datum.state >= nstates {
-                    return self.err("?illegal state value");
-                }
-
-                let begin = self.config.begin;
-                let mut errmsg: Option<String> = None;
-                let mut insert: Option<StatemapRectWeight> = None;
-                let mut update: Option<(StatemapRectWeight, u64)> = None;
-
-                /*
-                 * We are going to do a lookup of our entity, but this will
-                 * cause us to lose our reference on self (mutable or
-                 * otherwise) -- which we need to fully record any error.  To
-                 * implement this absent non-lexical lifetimes, we put the
-                 * entity in a lexical scope implemented with "loop" so we
-                 * can break out of it on an error condition.
-                 */
-                loop {
-                    let name = &datum.entity;
-                    let entity = self.entity_lookup(name);
-
-                    match entity.start {
-                        Some(start) => {
-                            if time < start {
-                                errmsg = Some(format!(concat!("?time {} is out",
-                                    " of order with respect to prior time {}"),
-                                    time, start));
-                                break;
-                            }
-
-                            if time > begin {
-                                /*
-                                 * We can now create a new rectangle for this
-                                 * entity's past state.
-                                 */
-                                if start < begin {
-                                    entity.start = Some(begin);
-                                }
-
-                                let rval = entity.newrect(time, nstates);
-                                entity.last = entity.start;
-
-                                match rval.0 {
-                                    Some(rect) => {
-                                        update = Some((StatemapRectWeight {
-                                            weight: rect.1,
-                                            start: rect.0,
-                                            entity: entity.id
-                                        }, rect.2));
-                                    }
-                                    None => {}
-                                }
-
-                                insert = Some(StatemapRectWeight {
-                                    weight: (rval.1).1,
-                                    start: (rval.1).0,
-                                    entity: entity.id
-                                });
-                            }
-                        }
-                        None => {}
-                    }
-
-                    entity.start = Some(time);
-                    entity.state = Some(datum.state);
-                    break;
-                }
-
-                if errmsg.is_some() {
-                    return self.err(&errmsg.unwrap());
-                }
-
-                if update.is_some() {
-                    let mut rweight = update.unwrap().0;
-                    self.byweight.remove(&rweight);
-                    rweight.weight = update.unwrap().1;
-                    self.byweight.insert(rweight);
-                }
-
-                if insert.is_some() {
-                    self.byweight.insert(insert.unwrap());
-                }
-
+            /*
+             * If the time of this datum is after our specified end time,
+             * we have nothing further to do to process it.
+             */
+            if self.config.end > 0 && time > self.config.end {
                 return Ok(());
             }
-            _ => {}
+
+            if datum.state >= nstates {
+                return self.err("?illegal state value");
+            }
+
+            let begin = self.config.begin;
+            let mut errmsg: Option<String> = None;
+            let mut insert: Option<StatemapRectWeight> = None;
+            let mut update: Option<(StatemapRectWeight, u64)> = None;
+
+            /*
+             * We are going to do a lookup of our entity, but this will
+             * cause us to lose our reference on self (mutable or
+             * otherwise) -- which we need to fully record any error.  To
+             * implement this absent non-lexical lifetimes, we put the
+             * entity in a lexical scope implemented with "loop" so we
+             * can break out of it on an error condition.
+             */
+            loop {
+                let name = &datum.entity;
+                let entity = self.entity_lookup(name);
+
+                if let Some(start) = entity.start {
+                    if time < start {
+                        errmsg = Some(format!(concat!("?time {} is out",
+                            " of order with respect to prior time {}"),
+                            time, start));
+                        break;
+                    }
+
+                    if time > begin {
+                        /*
+                         * We can now create a new rectangle for this
+                         * entity's past state.
+                         */
+                        if start < begin {
+                            entity.start = Some(begin);
+                        }
+
+                        let rval = entity.newrect(time, nstates);
+                        entity.last = entity.start;
+
+                        if let Some(rect) = rval.0 {
+                            update = Some((StatemapRectWeight {
+                                weight: rect.1,
+                                start: rect.0,
+                                entity: entity.id
+                            }, rect.2));
+                        }
+
+                        insert = Some(StatemapRectWeight {
+                            weight: (rval.1).1,
+                            start: (rval.1).0,
+                            entity: entity.id
+                        });
+                    }
+                }
+
+                entity.start = Some(time);
+                entity.state = Some(datum.state);
+                break;
+            }
+
+            if errmsg.is_some() {
+                return self.err(&errmsg.unwrap());
+            }
+
+            if update.is_some() {
+                let mut rweight = update.unwrap().0;
+                self.byweight.remove(&rweight);
+                rweight.weight = update.unwrap().1;
+                self.byweight.insert(rweight);
+            }
+
+            if insert.is_some() {
+                self.byweight.insert(insert.unwrap());
+            }
+
+            return Ok(());
         }
 
         let parsed: Result<StatemapInputDescription, serde_json::Error>;
         parsed = serde_json::from_str(payload);
 
-        match parsed {
-            Ok(datum) => {
-                let entity = self.entity_lookup(&datum.entity);
-                entity.description = Some(datum.description.to_string());
+        if let Ok(datum) = parsed {
+            let entity = self.entity_lookup(&datum.entity);
+            entity.description = Some(datum.description.to_string());
 
-                return Ok(());
-            }
-            _ => {}
+            return Ok(());
         }
 
         let parsed: Result<StatemapInputEvent, serde_json::Error>;
         parsed = serde_json::from_str(payload);
 
-        match parsed {
-            Ok(_datum) => {
-                /*
-                 * Right now, we don't do anything with events -- but the
-                 * intent is to be able to render these in the statemap, so
-                 * we also don't reject them.
-                 */
-                self.nevents += 1;
+        if let Ok(_) = parsed {
+            /*
+             * Right now, we don't do anything with events -- but the
+             * intent is to be able to render these in the statemap, so
+             * we also don't reject them.
+             */
+            self.nevents += 1;
 
-                return Ok(());
-            }
-            _ => {}
+            return Ok(());
         }
 
         self.err("?unrecognized payload")
@@ -1664,9 +1632,8 @@ mod tests {
         let mut statemap = minimal(config);
 
         for datum in data {
-            match statemap.ingest_datum(datum) {
-                Err(err) => { panic!("data incorrectly failed: {:?}", err); }
-                Ok(_) => {}
+            if let Err(err) = statemap.ingest_datum(datum) {
+                panic!("data incorrectly failed: {:?}", err);
             }
         }
 
@@ -1691,10 +1658,8 @@ mod tests {
     }
 
     fn bad_datum(operand: Option<Statemap>, datum: &str, expected: &str) {
-        let mut statemap = match operand {
-            Some(statemap) => statemap,
-            None => {
-                metadata(None, r##"{
+        let mut statemap = operand.unwrap_or_else(|| {
+            metadata(None, r##"{
                     "start": [ 0, 0 ],
                     "title": "Foo",
                     "states": {
@@ -1702,8 +1667,7 @@ mod tests {
                         "one": {"value": 1 }
                     }
                 }"##)
-            }
-        };
+        });
 
         match statemap.ingest_datum(datum) {
             Err(err) => {
