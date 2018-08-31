@@ -141,8 +141,8 @@ struct StatemapSVGGlobals<'a> {
     timeWidth: u64,
     lmargin: u32,
     tmargin: u32,
-    states: &'a Vec<StatemapState>,
-    start: &'a Vec<u64>,
+    states: &'a [StatemapState],
+    start: &'a [u64],
     entityKind: &'a str,
 }
 
@@ -232,8 +232,8 @@ impl FromStr for StatemapColor {
             let g = u8::from_str_radix(&name[3..5], 16);
             let b = u8::from_str_radix(&name[5..7], 16);
 
-            if r.is_ok() && g.is_ok() && b.is_ok() {
-                let rgb = Srgb::new(r.unwrap(), g.unwrap(), b.unwrap());
+            if let (Ok(r), Ok(g), Ok(b)) = (a, b, c) {
+                let rgb = Srgb::new(r, g, b);
 
                 return Ok(StatemapColor {
                     color: rgb.into_format().into_linear().into()
@@ -536,7 +536,7 @@ impl StatemapEntity {
 
     fn output_svg(&self, config: &StatemapSVGConfig,
         globals: &StatemapSVGGlobals,
-        colors: &Vec<StatemapColor>, y: u32) -> Vec<String>
+        colors: &[StatemapColor], y: u32) -> Vec<String>
     {
         let rect_width = |rect: &StatemapRect| -> f64 {
             /*
@@ -1442,7 +1442,7 @@ impl Statemap {
             println!("</svg>");
         };
 
-        let output_legend = |props: &Props, colors: &Vec<StatemapColor>| {
+        let output_legend = |props: &Props, colors: &[StatemapColor]| {
             let x = props.x;
             let mut y = props.y;
             let height = props.lheight;
@@ -1536,7 +1536,7 @@ impl Statemap {
         /*
          * Make sure that all of our colors are valid.
          */
-        let mut colors: Vec<StatemapColor> = vec![];
+        let mut colors: Vec<StatemapColor> = Vec::with_capacity(self.states.len());
 
         for i in 0..self.states.len() {
             match self.states[i].color {
