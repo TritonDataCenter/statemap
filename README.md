@@ -11,11 +11,11 @@ viewer (e.g., a web browser), allowing *interaction*.
 
 ## Installation
 
-To install the command to render a statemap from instrumentation data:
+To compile the command to render a statemap from instrumentation data:
 
-    npm install statemap
+    cargo build --release
 
-Note that statemap requires node 4.x or later.
+Note that statemap requires Rust.
 
 ## Instrumentation
 
