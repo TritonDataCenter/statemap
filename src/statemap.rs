@@ -232,8 +232,8 @@ impl FromStr for StatemapColor {
             let g = u8::from_str_radix(&name[3..5], 16);
             let b = u8::from_str_radix(&name[5..7], 16);
 
-            if r.is_ok() && g.is_ok() && b.is_ok() {
-                let rgb = Srgb::new(r.unwrap(), g.unwrap(), b.unwrap());
+            if let (Ok(r), Ok(g), Ok(b)) = (r, g, b) {
+                let rgb = Srgb::new(r, g, b);
 
                 return Ok(StatemapColor {
                     color: rgb.into_format().into_linear().into()
