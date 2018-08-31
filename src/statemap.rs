@@ -33,12 +33,12 @@ struct StatemapInputDescription {
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 struct StatemapInputMetadata {
     start: Vec<u64>,
     title: String,
     host: Option<String>,
-    entityKind: Option<String>,
+    entity_kind: Option<String>,
     states: HashMap<String, StatemapInputState>,
 }
 
@@ -62,12 +62,12 @@ pub struct Config {
  * These fields are dropped directly into the SVG.
  */
 #[derive(Debug,Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct StatemapSVGConfig {
-    pub stripHeight: u32,
-    pub legendWidth: u32,
-    pub tagWidth: u32,
-    pub stripWidth: u32,
+    pub strip_height: u32,
+    pub legend_width: u32,
+    pub tag_width: u32,
+    pub strip_width: u32,
     pub background: String,
     pub sortby: Option<String>,
 }
@@ -130,20 +130,20 @@ pub struct StatemapError {
 }
 
 #[derive(Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 struct StatemapSVGGlobals<'a> {
     begin: u64,
     end: u64,
-    entityPrefix: String,
-    pixelHeight: u32,
-    pixelWidth: u32,
-    totalHeight: u32,
-    timeWidth: u64,
+    entity_prefix: String,
+    pixel_height: u32,
+    pixel_width: u32,
+    total_height: u32,
+    time_width: u64,
     lmargin: u32,
     tmargin: u32,
     states: &'a Vec<StatemapState>,
     start: &'a Vec<u64>,
-    entityKind: &'a str,
+    entity_kind: &'a str,
 }
 
 use std::fs::File;
@@ -177,10 +177,10 @@ impl Default for Config {
 impl Default for StatemapSVGConfig {
     fn default() -> StatemapSVGConfig {
         StatemapSVGConfig {
-            stripHeight: 10,
-            legendWidth: 138,
-            stripWidth: 862,
-            tagWidth: 250,
+            strip_height: 10,
+            legend_width: 138,
+            strip_width: 862,
+            tag_width: 250,
             background: "#f0f0f0".to_string(),
             sortby: None,
         }
@@ -547,8 +547,8 @@ impl StatemapEntity {
              * losing any accuracy (the next rectangle will tile over ours at
              * an unadjusted offset).
              */
-            ((rect.duration as f64 / globals.timeWidth as f64) *
-                globals.pixelWidth as f64) + 0.4 as f64
+            ((rect.duration as f64 / globals.time_width as f64) *
+                globals.pixel_width as f64) + 0.4 as f64
         };
 
         let mut x: f64;
@@ -560,17 +560,17 @@ impl StatemapEntity {
 
         if map.len() > 0 {
             x = ((map[0] - globals.begin) as f64 /
-                globals.timeWidth as f64) * globals.pixelWidth as f64;
+                globals.time_width as f64) * globals.pixel_width as f64;
         } else {
-            x = globals.pixelWidth as f64;
+            x = globals.pixel_width as f64;
         }
             
         println!(r##"<rect x="0" y="{}" width="{}"
-            height="{}" style="fill:{}" />"##, y, x, config.stripHeight,
+            height="{}" style="fill:{}" />"##, y, x, config.strip_height,
             config.background);
 
         println!(r##"<g id="{}{}"><title>{} {}</title>"##,
-            globals.entityPrefix, self.name, globals.entityKind, self.name);
+            globals.entity_prefix, self.name, globals.entity_kind, self.name);
 
         for i in 0..map.len() {
             let rect = self.rects.get(&map[i]).unwrap().borrow();
@@ -578,7 +578,7 @@ impl StatemapEntity {
             let mut blended = false;
 
             x = ((map[i] - globals.begin) as f64 /
-                globals.timeWidth as f64) * globals.pixelWidth as f64;
+                globals.time_width as f64) * globals.pixel_width as f64;
 
             for j in 0..rect.states.len() {
                 if rect.states[j] != 0 {
@@ -601,7 +601,7 @@ impl StatemapEntity {
                 println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                     r##"height="{}" onclick="mapclick(evt, {})" "##,
                     r##"style="fill:{}" />"##),
-                    x, y, rect_width(&rect), config.stripHeight,
+                    x, y, rect_width(&rect), config.strip_height,
                     data.len() - 1, colors[state.unwrap()]);
 
                 continue;
@@ -635,7 +635,7 @@ impl StatemapEntity {
             println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                 r##"height="{}" onclick="mapclick(evt, {})" "##,
                 r##"style="fill:{}" />"##), x, y, rect_width(&rect),
-                config.stripHeight, data.len() - 1, color);
+                config.strip_height, data.len() - 1, color);
         }
         
         println!("</g>");
@@ -1467,8 +1467,7 @@ impl Statemap {
             _ => { return self.err("metadata not found in data stream"); }
         };
 
-        #[allow(non_snake_case)]
-        let timeWidth = self.entities.values().fold(self.config.end,
+        let time_width = self.entities.values().fold(self.config.end,
             |latest, e| {
                 match e.start {
                     Some(start) => cmp::max(latest, start),
@@ -1476,13 +1475,13 @@ impl Statemap {
                }
             }) - self.config.begin;
 
-        let lmargin = config.legendWidth;
+        let lmargin = config.legend_width;
         let tmargin = 60;
-        let rmargin = config.tagWidth;
+        let rmargin = config.tag_width;
 
         let height = (self.entities.len() as u32 *
-            config.stripHeight) + tmargin;
-        let width = config.stripWidth + lmargin + rmargin;
+            config.strip_height) + tmargin;
+        let width = config.strip_width + lmargin + rmargin;
 
         let mut props = Props { x: 20, y: tmargin, height: 45,
             width: lmargin, lheight: 15, spacing: 10 };
@@ -1493,16 +1492,16 @@ impl Statemap {
         let globals = StatemapSVGGlobals {
             begin: self.config.begin,
             end: self.config.end,
-            pixelWidth: config.stripWidth,
-            pixelHeight: height - tmargin,
-            totalHeight: cmp::max(height, lheight),
-            timeWidth: timeWidth,
+            pixel_width: config.strip_width,
+            pixel_height: height - tmargin,
+            total_height: cmp::max(height, lheight),
+            time_width: time_width,
             lmargin: lmargin,
             tmargin: tmargin,
-            entityPrefix: "statemap-entity-".to_string(),
+            entity_prefix: "statemap-entity-".to_string(),
             states: &self.states,
             start: &metadata.start,
-            entityKind: match metadata.entityKind {
+            entity_kind: match metadata.entity_kind {
                 Some(ref kind) => { kind }
                 None => { "Entity" }
             }
@@ -1560,12 +1559,12 @@ impl Statemap {
             <svg width="{}" height="{}"
                 xmlns="http://www.w3.org/2000/svg"
                 version="1.1"
-                onload="init(evt)">"##, width, globals.totalHeight);
+                onload="init(evt)">"##, width, globals.total_height);
 
         self.output_defs(config, &globals);
 
         println!(r##"<svg x="{}px" y="{}px" width="{}px" height="{}px">"##,
-            lmargin, tmargin, globals.pixelWidth, height - tmargin);
+            lmargin, tmargin, globals.pixel_width, height - tmargin);
 
         /*
          * First, we drop down a background rectangle as big as our SVG. This
@@ -1574,7 +1573,7 @@ impl Statemap {
          */
         println!(concat!(r##"<rect x="0px" y="0px" width="{}px" "##,
             r##"height="{}px" fill="{}" id="statemap-highlight" />"##),
-            globals.pixelWidth, height - tmargin, config.background);
+            globals.pixel_width, height - tmargin, config.background);
 
         println!(r##"<g id="statemap" transform="matrix(1 0 0 1 0 0)">"##);
 
@@ -1587,7 +1586,7 @@ impl Statemap {
             println!("{}", e);
             data.insert(&entity.name, 
                 entity.output_svg(config, &globals, &colors, y));
-            y += config.stripHeight;
+            y += config.strip_height;
         }
 
         println!("</g>");
@@ -1600,19 +1599,19 @@ impl Statemap {
          */
         println!(r##"<polygon class="statemap-border""##);
         println!(r##"  points="{} {}, {} {}, {} {}, {} {}"/>"##,
-            lmargin, tmargin, lmargin + globals.pixelWidth, tmargin,
-            lmargin + globals.pixelWidth, height, lmargin, height);
+            lmargin, tmargin, lmargin + globals.pixel_width, tmargin,
+            lmargin + globals.pixel_width, height, lmargin, height);
 
         println!(concat!(r##"<text x="{}" y="{}" "##,
             r##"class="statemap-title sansserif">{}</text>"##),
-            lmargin + (globals.pixelWidth / 2), 16, metadata.title);
+            lmargin + (globals.pixel_width / 2), 16, metadata.title);
 
         println!(concat!(r##"<text x="{}" y="{}" class="statemap-timelabel"##,
             r##" sansserif" id="statemap-timelabel"></text>"##),
-            lmargin + (globals.pixelWidth / 2), 34);
+            lmargin + (globals.pixel_width / 2), 34);
 
         println!(r##"<line x1="{}" y1="{}" x2="{}" y2="{}""##,
-            lmargin + 10, 40, lmargin + globals.pixelWidth - 10, 40);
+            lmargin + 10, 40, lmargin + globals.pixel_width - 10, 40);
         println!(r##"class="statemap-timeline" />"##);
 
         props.width -= (2 * props.x) + 10;
