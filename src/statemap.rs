@@ -330,7 +330,7 @@ impl StatemapEntity {
 
         match self.last {
             Some(last) => {
-                let mut lrect = self.rects.get(&last).unwrap().borrow_mut();
+                let mut lrect = self.rects[&last].borrow_mut();
                 let old = lrect.weight;
 
                 lrect.next = Some(start);
@@ -348,7 +348,7 @@ impl StatemapEntity {
     }
 
     fn addto(&mut self, rect: u64, delta: u64) -> u64 {
-        let mut r = self.rects.get(&rect).unwrap().borrow_mut();
+        let mut r = self.rects[&rect].borrow_mut();
         let old = r.weight;
 
         r.weight += delta;
@@ -388,13 +388,13 @@ impl StatemapEntity {
              * cell fall out of scope as we may need it to be mutable, below.
              */
             {
-                let vcell = self.rects.get(&victim).unwrap();
+                let vcell = &self.rects[&victim];
                 let v = vcell.borrow();
 
                 match (v.prev, v.next) {
                     (None, None) => panic!("nothing to subsume"),
                     (Some(prev), None) => {
-                        left = self.rects.get(&prev).unwrap();
+                        left = &self.rects[&prev];
                         right = vcell;
 
                         let lref = left.borrow();
@@ -404,7 +404,7 @@ impl StatemapEntity {
                     }
                     (None, Some(next)) => {
                         left = vcell;
-                        right = self.rects.get(&next).unwrap();
+                        right = &self.rects[&next];
 
                         /*
                          * We want the weight of the remaining (center)
@@ -422,8 +422,8 @@ impl StatemapEntity {
                          * We want whichever of our neighboring rectangles is
                          * shorter to subsume us.
                          */
-                        let l = self.rects.get(&prev).unwrap();
-                        let r = self.rects.get(&next).unwrap();
+                        let l = &self.rects[&prev];
+                        let r = &self.rects[&next];
 
                         let lref = l.borrow();
                         let rref = r.borrow();
@@ -460,7 +460,7 @@ impl StatemapEntity {
              */
             match s.next {
                 Some(next) => {
-                    self.rects.get(&next).unwrap()
+                    self.rects[&next]
                         .borrow_mut().prev = Some(s.start);
                 }
                 None => {
@@ -573,7 +573,7 @@ impl StatemapEntity {
             globals.entityPrefix, self.name, globals.entityKind, self.name);
 
         for i in 0..map.len() {
-            let rect = self.rects.get(&map[i]).unwrap().borrow();
+            let rect = self.rects[&map[i]].borrow();
             let mut state = None;
             let mut blended = false;
 
@@ -593,22 +593,22 @@ impl StatemapEntity {
             }
 
             if !blended {
-                assert!(state.is_some());
+                let state = state.unwrap();
 
                 data.push(format!("{{ t: {}, s: {} }}",
-                    rect.start, state.unwrap()));
+                    rect.start, state));
 
                 println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                     r##"height="{}" onclick="mapclick(evt, {})" "##,
                     r##"style="fill:{}" />"##),
                     x, y, rect_width(&rect), config.stripHeight,
-                    data.len() - 1, colors[state.unwrap()]);
+                    data.len() - 1, colors[state]);
 
                 continue;
             }
 
             let max = rect.states.iter().enumerate()
-                .max_by(|&(_, lhs), &(_, rhs)| lhs.cmp(rhs)).unwrap().0;
+                .max_by_key(|t| t.1).unwrap().0;
 
             let mut color = colors[max];
             let mut datum = format!("{{ t: {}, s: {{ ", rect.start);
@@ -652,7 +652,7 @@ impl StatemapEntity {
         l = v.len();
 
         for i in 0..l {
-            let me = self.rects.get(&v[i]).unwrap().borrow();
+            let me = self.rects[&v[i]].borrow();
             println!("{}: entity={}: [{}] {:?}: {:?}",
                 header, self.id, i, v[i], me);
         }
@@ -670,11 +670,11 @@ impl StatemapEntity {
         l = v.len();
 
         for i in 0..l {
-            let me = self.rects.get(&v[i]).unwrap().borrow();
+            let me = self.rects[&v[i]].borrow();
             let mut weight = me.duration;
 
             if i < l - 1 {
-                let next = self.rects.get(&v[i + 1]).unwrap().borrow();
+                let next = self.rects[&v[i + 1]].borrow();
                 assert_eq!(me.next, Some(next.start));
                 assert!(me.start < next.start);
                 weight += next.duration;
@@ -684,7 +684,7 @@ impl StatemapEntity {
             }
 
             if i > 0 {
-                let prev = self.rects.get(&v[i - 1]).unwrap().borrow();
+                let prev = self.rects[&v[i - 1]].borrow();
                 assert_eq!(me.prev, Some(prev.start));
                 assert!(me.start > prev.start);
                 weight += prev.duration;
@@ -895,9 +895,7 @@ impl Statemap {
             None => { v = values.map(|e| (0, &e.name, e.id)).collect(); },
             Some(state) => {
                 v = values.map(|e| {
-                    let ttl = e.rects.values().fold(0, |i, r| {
-                        i + r.borrow().states[state]
-                    });
+                    let ttl = e.rects.values().map(|r| r.borrow().states[state]).sum();
 
                     (ttl, &e.name, e.id)
                 }).collect();
@@ -905,13 +903,8 @@ impl Statemap {
         }
 
         v.sort_by(|&a, &b| {
-            let result = b.0.cmp(&a.0);
-
-            if result == cmp::Ordering::Equal {
-                natord::compare(a.1, b.1)
-            } else {
-                result
-            }
+            b.0.cmp(&a.0)
+                .then_with(|| natord::compare(a.1, b.1))
         });
 
         v.iter().map(|e| e.2).collect()
@@ -1012,24 +1005,16 @@ impl Statemap {
 
     #[cfg(test)]
     fn get_rects(&self, entity: &str) -> Vec<(u64, u64, Vec<u64>)> {
-        let mut rval: Vec<(u64, u64, Vec<u64>)>;
-
         let e = self.entities.get(entity);
+        e.map(|entity| {
+            let mut rval: Vec<_> = entity.rects.values().map(|r| {
+                let rect = r.borrow();
 
-        match e {
-            Some(entity) => {
-                rval = entity.rects.values().map(|r| {
-                    let rect = r.borrow();
-
-                    (rect.start, rect.duration, rect.states.clone())
-                }).collect();
-
-                rval.sort();
-            },
-            None => { rval = vec![]; }
-        }
-
-        rval
+                (rect.start, rect.duration, rect.states.clone())
+            }).collect();
+            rval.sort();
+            rval
+        }).unwrap_or_else(Vec::new)
     }
 
     fn ingest_metadata(&mut self, payload: &str) -> Result<(), Box<Error>> {
@@ -1091,12 +1076,7 @@ impl Statemap {
              * If we weren't given an ending time, take a lap through all
              * of our entities to find the one with the latest time.
              */
-            end = self.entities.values().fold(0, |latest, e| {
-                match e.start {
-                    Some(start) => cmp::max(latest, start),
-                    None => latest
-                }
-            });
+            end = self.entities.values().filter_map(|e| e.start).max().unwrap_or(0);
         }
 
         let nstates = self.states.len() as u32;
@@ -1401,13 +1381,12 @@ impl Statemap {
             for entity in data.keys() {
                 println!("{}{}: [", comma, entity);
 
-                let datum = data.get(entity).unwrap();
+                let datum = &data[entity];
 
-                for i in 0..datum.len() - 1 {
+                for i in 0..datum.len() {
                     println!("{},", datum[i]);
                 }
 
-                println!("{}", datum[datum.len() - 1]);
                 println!("]");
                 comma = ",";
             }
@@ -1468,13 +1447,9 @@ impl Statemap {
         };
 
         #[allow(non_snake_case)]
-        let timeWidth = self.entities.values().fold(self.config.end,
-            |latest, e| {
-                match e.start {
-                    Some(start) => cmp::max(latest, start),
-                    None => latest
-               }
-            }) - self.config.begin;
+        let timeWidth = self.entities.values()
+            .filter_map(|e| e.start) .max()
+            .unwrap_or(self.config.end) - self.config.begin;
 
         let lmargin = config.legendWidth;
         let tmargin = 60;
@@ -1582,7 +1557,7 @@ impl Statemap {
         let mut data = HashMap::new();
 
         for e in entities {
-            let entity = self.entities.get(self.byid.get(e).unwrap()).unwrap();
+            let entity = &self.entities[&self.byid[e]];
 
             println!("{}", e);
             data.insert(&entity.name, 

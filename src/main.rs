@@ -9,7 +9,6 @@
 
 extern crate getopts;
 use getopts::Options;
-use getopts::HasArg;
 use std::env;
 
 #[macro_use]
@@ -89,62 +88,15 @@ fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
 }
 
 fn main() {
-    struct Opt {
-        name: (&'static str, &'static str),
-        help: &'static str,
-        hint: &'static str,
-        hasarg: HasArg,
-    }
-
-    let opts: &[Opt] = &[
-        Opt {
-            name: ("b", "begin"),
-            help: "time offset at which to begin statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("e", "end"),
-            help: "time offset at which to end statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("d", "duration"),
-            help: "time duration of statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("c", "coalesce"),
-            help: "coalesce target",
-            hint: "TARGET",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("h", "help"),
-            help: "print this usage message",
-            hint: "",
-            hasarg: HasArg::No
-        },
-        Opt {
-            name: ("s", "sortby"),
-            help: "state to sort by (defaults to entity name)",
-            hint: "STATE",
-            hasarg: HasArg::Yes
-        },
-    ];
+    let mut parser = Options::new();
+    parser.optflag("h", "help", "print this usage message");
+    parser.optopt("b", "begin", "time offset at which to begin statemap", "TIME");
+    parser.optopt("e", "end", "time offset at which to end statemap", "TIME");
+    parser.optopt("d", "duration", "time duration of statemap",  "TIME");
+    parser.optopt("c", "coalesce", "coalesce target", "TARGET");
+    parser.optopt("s", "sortby", "state to sort by (defaults to entity name)", "STATE");
 
     let args: Vec<String> = env::args().collect();
-    let mut parser = Options::new();
-
-    /*
-     * Load the parser with our options.
-     */
-    for opt in opts {
-        parser.opt(opt.name.0, opt.name.1,
-            opt.help, opt.hint, opt.hasarg, getopts::Occur::Optional);
-    }
 
     let matches = match parser.parse(&args[1..]) {
         Ok(m) => { m }
