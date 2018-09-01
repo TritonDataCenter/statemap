@@ -1448,8 +1448,10 @@ impl Statemap {
 
         #[allow(non_snake_case)]
         let timeWidth = self.entities.values()
-            .filter_map(|e| e.start) .max()
-            .unwrap_or(self.config.end) - self.config.begin;
+            .filter_map(|e| e.start).fold(
+                self.config.end,
+                cmp::max
+            ) - self.config.begin;
 
         let lmargin = config.legendWidth;
         let tmargin = 60;
