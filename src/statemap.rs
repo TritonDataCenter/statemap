@@ -759,17 +759,17 @@ impl Statemap {
     }
 
     fn json_end(&mut self, current: &str) -> Result<usize, StatemapError> {
-        let mut iter = current.chars();
+        let mut iter = current.chars().enumerate();
         let first = iter.next();
         let start = self.line;
 
-        assert_eq!(first, Some('{'));
+        assert_eq!(first, Some((0, '{')));
 
         let mut notinstring = 1;
         let mut backslashed = false;
         let mut depth = 1;
 
-        for (idx, c) in iter.enumerate() {
+        for (idx, c) in iter {
             if c == '\n' {
                 self.line += 1;
             }
