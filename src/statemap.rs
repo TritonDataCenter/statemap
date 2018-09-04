@@ -115,7 +115,6 @@ struct StatemapEntity {
 pub struct Statemap {
     config: Config,                         // configuration
     metadata: Option<StatemapInputMetadata>, // in-stream metadata
-    line: u64,                              // current line number
     nrecs: u64,                             // number of records
     nevents: u64,                           // number of events
     entities: HashMap<String, StatemapEntity>, // hash of entities
@@ -147,7 +146,6 @@ struct StatemapSVGGlobals<'a> {
 }
 
 use std::fs::File;
-use std::fs;
 use std::str;
 use std::error::Error;
 use std::fmt;
@@ -188,13 +186,8 @@ impl Default for StatemapSVGConfig {
 }
 
 impl StatemapError {
-    fn new(statemap: &Statemap, msg: &str) -> StatemapError {
-        if msg.starts_with("?") {
-            StatemapError { errmsg: format!("illegal datum on line {}: {}",
-              statemap.line, &msg[1..])}
-        } else {
-            StatemapError { errmsg: msg.to_string() }
-        }
+    fn new(msg: &str) -> StatemapError {
+        StatemapError { errmsg: msg.to_string() }
     }
 }
 
@@ -716,11 +709,15 @@ impl StatemapEntity {
     }
 }
 
+enum Ingest {
+    Success,
+    EndOfFile,
+}
+
 impl Statemap {
     pub fn new(config: &Config) -> Self {
         Statemap {
             config: *config,
-            line: 1,
             nrecs: 0,
             nevents: 0,
             entities: HashMap::new(),
@@ -731,78 +728,8 @@ impl Statemap {
         }
     }
 
-    fn err(&self, msg: &str) -> Result<(), Box<Error>>  {
-        Err(Box::new(StatemapError::new(self, msg)))
-    }
-
-    fn json_start(&mut self, current: &str) ->
-        Result<usize, StatemapError>
-    {
-        let iter = current.chars();
-        let mut idx = 0;
-
-        for c in iter {
-            match c {
-                '{' => return Ok(idx),
-                '\n' => self.line += 1,
-                c if c.is_whitespace() => {},
-                _ => {
-                    let errmsg = format!(concat!("line {}: illegal JSON ",
-                        "delimiter (\"{}\")\n"), self.line, c);
-                    return Err(StatemapError::new(self, &errmsg));
-                }
-            }
-            idx += 1;
-        }
-
-        Ok(idx)
-    }
-
-    fn json_end(&mut self, current: &str) -> Result<usize, StatemapError> {
-        let mut iter = current.chars();
-        let first = iter.next();
-        let start = self.line;
-
-        assert_eq!(first, Some('{'));
-
-        let mut idx: usize = 0;
-        let mut notinstring = 1;
-        let mut backslashed = false;
-        let mut depth = 1;
-
-        for c in iter {
-            idx += 1;
-
-            if c == '\n' {
-                self.line += 1;
-            }
-
-            if backslashed {
-                backslashed = false;
-                continue;
-            }
-
-            match c {
-                '"' => notinstring ^= 1,
-                '\\' => backslashed = true,
-                '{' => depth += notinstring,
-                '}' => {
-                    depth -= notinstring;
-
-                    if depth == 0 {
-                        /*
-                         * We return the index beyond the end to assure that
-                         * a [start..end] slice yields the entire payload.
-                         */
-                        return Ok(idx + 1);
-                    }
-                }
-                _ => continue
-            }
-        }
-
-        let errmsg = format!("unterminated JSON starting at line {}", start);
-        Err(StatemapError::new(self, &errmsg))
+    fn err<T>(&self, msg: &str) -> Result<T, Box<Error>>  {
+        Err(Box::new(StatemapError::new(msg)))
     }
 
     fn entity_lookup(&mut self, name: &str) -> &mut StatemapEntity {
@@ -1032,8 +959,17 @@ impl Statemap {
         rval
     }
 
-    fn ingest_metadata(&mut self, payload: &str) -> Result<(), Box<Error>> {
-        let metadata: StatemapInputMetadata = serde_json::from_str(payload)?;
+    /*
+     * Ingest and advance `payload` past the metadata JSON object.
+     */
+    fn ingest_metadata(&mut self, payload: &mut &str)
+        -> Result<(), Box<Error>>
+    {
+        let metadata: StatemapInputMetadata = match try_parse(payload)? {
+            None => return self.err("missing metadata payload"),
+            Some(metadata) => metadata,
+        };
+
         let nstates = metadata.states.len();
         let mut states: Vec<Option<StatemapState>> = vec![None; nstates];
 
@@ -1117,19 +1053,21 @@ impl Statemap {
         }
     }
 
-    fn ingest_datum(&mut self, payload: &str) -> Result<(), Box<Error>> {
-        let parsed: Result<StatemapInputDatum, serde_json::Error>;
-
-        parsed = serde_json::from_str(payload);
-
-        match parsed {
-            Ok(datum) => { 
+    /*
+     * Ingest and advance `payload` past one JSON object datum.
+     */
+    fn ingest_datum(&mut self, payload: &mut &str)
+        -> Result<Ingest, Box<Error>>
+    {
+        match try_parse::<StatemapInputDatum>(payload) {
+            Ok(None) => return Ok(Ingest::EndOfFile),
+            Ok(Some(datum)) => { 
                 let time: u64;
                 let nstates: u32 = self.states.len() as u32;
 
                 match <u64>::from_str(&datum.time) {
                     Ok(t) => time = t,
-                    _ => return self.err("?illegal time value")
+                    _ => return self.err("illegal time value")
                 }
 
                 /*
@@ -1137,11 +1075,11 @@ impl Statemap {
                  * we have nothing further to do to process it.
                  */
                 if self.config.end > 0 && time > self.config.end {
-                    return Ok(());
+                    return Ok(Ingest::Success);
                 }
 
                 if datum.state >= nstates {
-                    return self.err("?illegal state value");
+                    return self.err("illegal state value");
                 }
 
                 let begin = self.config.begin;
@@ -1164,7 +1102,7 @@ impl Statemap {
                     match entity.start {
                         Some(start) => {
                             if time < start {
-                                errmsg = Some(format!(concat!("?time {} is out",
+                                errmsg = Some(format!(concat!("time {} is out",
                                     " of order with respect to prior time {}"),
                                     time, start));
                                 break;
@@ -1223,29 +1161,25 @@ impl Statemap {
                     self.byweight.insert(insert.unwrap());
                 }
 
-                return Ok(());
+                return Ok(Ingest::Success);
             }
-            _ => {}
+            Err(_) => {}
         }
 
-        let parsed: Result<StatemapInputDescription, serde_json::Error>;
-        parsed = serde_json::from_str(payload);
-
-        match parsed {
-            Ok(datum) => {
+        match try_parse::<StatemapInputDescription>(payload) {
+            Ok(None) => return Ok(Ingest::EndOfFile),
+            Ok(Some(datum)) => {
                 let entity = self.entity_lookup(&datum.entity);
                 entity.description = Some(datum.description.to_string());
 
-                return Ok(());
+                return Ok(Ingest::Success);
             }
-            _ => {}
+            Err(_) => {}
         }
 
-        let parsed: Result<StatemapInputEvent, serde_json::Error>;
-        parsed = serde_json::from_str(payload);
-
-        match parsed {
-            Ok(_datum) => {
+        match try_parse::<StatemapInputEvent>(payload) {
+            Ok(None) => return Ok(Ingest::EndOfFile),
+            Ok(Some(_datum)) => {
                 /*
                  * Right now, we don't do anything with events -- but the
                  * intent is to be able to render these in the statemap, so
@@ -1253,53 +1187,53 @@ impl Statemap {
                  */
                 self.nevents += 1;
 
-                return Ok(());
+                return Ok(Ingest::Success);
             }
-            _ => {}
+            Err(_) => {}
         }
 
-        self.err("?unrecognized payload")
+        self.err("unrecognized payload")
     }
 
     pub fn ingest(&mut self, filename: &str) -> Result<(), Box<Error>> {
-        let stat = fs::metadata(filename)?;
         let file = File::open(filename)?;
-        let len: usize = stat.len() as usize;
         let mut nrecs = 0;
 
+        /*
+         * Unsafe because Rust cannot enforce that the underlying data on
+         * filesystem is not mutated while our program contains a &[u8]
+         * reference to it. Mutating the file would result in undefined
+         * behavior.
+         */
         let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let mut contents = str::from_utf8(&mmap[..])?;
+        let len = contents.len();
 
-        let contents = str::from_utf8(&mmap[..])?;
-
-        let mut start = self.json_start(contents)?;
-
-        if start == len {
-            return self.err("missing metadata payload");
-        }
-
-        let mut end = self.json_end(contents)?;
-
-        self.ingest_metadata(&contents[start..end])?;
+        self.ingest_metadata(&mut contents)?;
 
         /*
          * Now rip through our data pulling out concatenated JSON payloads.
          */
         loop {
-            start = end + self.json_start(&contents[end..])?; 
-
-            if start == len {
-                break;
+            match self.ingest_datum(&mut contents) {
+                Ok(Ingest::Success) => nrecs += 1,
+                Ok(Ingest::EndOfFile) => break,
+                Err(err) => {
+                    /*
+                     * Lazily compute line number for error message.
+                     */
+                    let remaining_len = contents.len();
+                    let byte_offset = len - remaining_len;
+                    let line = 1 + count_newlines(&mmap[..byte_offset]);
+                    let message =
+                        format!("illegal datum on line {}: {}", line, err);
+                    return self.err(&message);
+                }
             }
-
-            end = start + self.json_end(&contents[start..])?;
-
-            self.ingest_datum(&contents[start..end])?;
 
             while self.byweight.len() >= self.config.maxrect as usize {
                 self.trim();
             }
-
-            nrecs += 1;
         }
         
         self.ingest_end();
@@ -1628,11 +1562,31 @@ impl Statemap {
     }
 }
 
+fn try_parse<'de, T>(content: &mut &'de str)
+    -> Result<Option<T>, serde_json::Error>
+where
+    T: serde::Deserialize<'de>
+{
+    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
+    match de.next() {
+        Some(Ok(value)) => {
+            *content = &content[de.byte_offset()..];
+            Ok(Some(value))
+        }
+        Some(Err(err)) => Err(err),
+        None => Ok(None),
+    }
+}
+
+fn count_newlines(bytes: &[u8]) -> usize {
+    bytes.iter().filter(|&&b| b == b'\n').count()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn metadata(config: Option<&Config>, metadata: &str) -> Statemap {
+    fn metadata(config: Option<&Config>, mut metadata: &str) -> Statemap {
         let mut statemap;
 
         match config {
@@ -1643,7 +1597,7 @@ mod tests {
             }
         }
 
-        match statemap.ingest_metadata(metadata) {
+        match statemap.ingest_metadata(&mut metadata) {
             Err(err) => { panic!("metadata incorrectly failed: {:?}", err); }
             Ok(_) => { statemap }
         }
@@ -1663,8 +1617,8 @@ mod tests {
     fn data(config: Option<&Config>, data: Vec<&str>) -> Statemap {
         let mut statemap = minimal(config);
 
-        for datum in data {
-            match statemap.ingest_datum(datum) {
+        for mut datum in data {
+            match statemap.ingest_datum(&mut datum) {
                 Err(err) => { panic!("data incorrectly failed: {:?}", err); }
                 Ok(_) => {}
             }
@@ -1673,11 +1627,11 @@ mod tests {
         statemap
     }
 
-    fn bad_metadata(metadata: &str, expected: &str) {
+    fn bad_metadata(mut metadata: &str, expected: &str) {
         let config: Config = Default::default();
         let mut statemap = Statemap::new(&config);
 
-        match statemap.ingest_metadata(metadata) {
+        match statemap.ingest_metadata(&mut metadata) {
             Err(err) => {
                 let errmsg = format!("{}", err);
 
@@ -1690,7 +1644,7 @@ mod tests {
         }
     }
 
-    fn bad_datum(operand: Option<Statemap>, datum: &str, expected: &str) {
+    fn bad_datum(operand: Option<Statemap>, mut datum: &str, expected: &str) {
         let mut statemap = match operand {
             Some(statemap) => statemap,
             None => {
@@ -1705,7 +1659,7 @@ mod tests {
             }
         };
 
-        match statemap.ingest_datum(datum) {
+        match statemap.ingest_datum(&mut datum) {
             Err(err) => {
                 let errmsg = format!("{}", err);
 
@@ -1906,21 +1860,21 @@ mod tests {
     fn bad_datum_badtime() {
         bad_datum(None, r##"
             { "time": 156683, "entity": "foo", "state": 0 }
-        "##, "illegal datum");
+        "##, "unrecognized payload");
     }
 
     #[test]
     fn bad_datum_badtime_float() {
         bad_datum(None, r##"
             { "time": "156683.12", "entity": "foo", "state": 0 }
-        "##, "illegal time value");
+        "##, "unrecognized payload");
     }
 
     #[test]
     fn bad_datum_nostate() {
         bad_datum(None, r##"
             { "time": "156683", "entity": "foo" }
-        "##, "illegal datum");
+        "##, "unrecognized payload");
     }
 
     #[test]
@@ -2056,9 +2010,9 @@ mod tests {
         statemap.verify();
         statemap.print("After first trim");
 
-        let datum = r##"{ "time": "210", "entity": "foo", "state": 1 }"##;
+        let mut datum = r##"{ "time": "210", "entity": "foo", "state": 1 }"##;
 
-        assert!(statemap.ingest_datum(datum).is_ok());
+        assert!(statemap.ingest_datum(&mut datum).is_ok());
         statemap.verify();
         statemap.print("After insert");
 
