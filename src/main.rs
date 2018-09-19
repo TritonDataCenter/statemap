@@ -7,10 +7,9 @@
  */
 #![deny(unused_must_use)]
 
-extern crate getopts;
-use getopts::Options;
-use getopts::HasArg;
-use std::env;
+#[macro_use]
+extern crate structopt;
+use structopt::StructOpt;
 
 #[macro_use]
 extern crate serde_derive;
@@ -30,12 +29,7 @@ macro_rules! fatal {
     });
 }
 
-fn usage(opts: Options) {
-    println!("{}", opts.usage("Usage: statemap [options] FILE"));
-    ::std::process::exit(0);
-}
-
-fn parse_offset(optval: &str, opt: &str) -> u64 {
+fn parse_offset(optval: &str) -> Result<u64, String> {
     fn parse_offset_val(val: &str) -> Option<u64> {
         let mut mult: u64 = 1;
         let mut num = val;
@@ -75,87 +69,35 @@ fn parse_offset(optval: &str, opt: &str) -> u64 {
         }
     }
 
-    match parse_offset_val(&optval) {
-        Some(val) => val,
-        None => fatal!(concat!("value for {} is not a valid ",
-            "expression of time: \"{}\""), opt, optval)
-    }
+    parse_offset_val(&optval).ok_or_else(|| {
+        format!("value is not a valid expression of time: \"{}\"", optval)
+    })
+}
+
+#[derive(StructOpt)]
+#[structopt(name = "statemap")]
+struct Opts {
+    /// time offset at which to begin statemap
+    #[structopt(short = "b", parse(try_from_str = "parse_offset"))]
+    begin: Option<u64>,
+    /// time offset at which to end statemap
+    #[structopt(short = "e", parse(try_from_str = "parse_offset"))]
+    end: Option<u64>,
+    /// time duration of statemap
+    #[structopt(short = "d", parse(try_from_str = "parse_offset"))]
+    duration: Option<u64>,
+    /// coalesce target
+    #[structopt(short = "c")]
+    coalesce: Option<u64>,
+    /// state to sort by (defaults to entity name)
+    #[structopt(short = "s")]
+    sortby: Option<String>,
+    file: String,
 }
 
 fn main() {
-    struct Opt {
-        name: (&'static str, &'static str),
-        help: &'static str,
-        hint: &'static str,
-        hasarg: HasArg,
-    }
-
-    let opts: &[Opt] = &[
-        Opt {
-            name: ("b", "begin"),
-            help: "time offset at which to begin statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("e", "end"),
-            help: "time offset at which to end statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("d", "duration"),
-            help: "time duration of statemap",
-            hint: "TIME",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("c", "coalesce"),
-            help: "coalesce target",
-            hint: "TARGET",
-            hasarg: HasArg::Yes
-        },
-        Opt {
-            name: ("h", "help"),
-            help: "print this usage message",
-            hint: "",
-            hasarg: HasArg::No
-        },
-        Opt {
-            name: ("s", "sortby"),
-            help: "state to sort by (defaults to entity name)",
-            hint: "STATE",
-            hasarg: HasArg::Yes
-        },
-    ];
-
-    let args: Vec<String> = env::args().collect();
-    let mut parser = Options::new();
-
-    /*
-     * Load the parser with our options.
-     */
-    for opt in opts {
-        parser.opt(opt.name.0, opt.name.1,
-            opt.help, opt.hint, opt.hasarg, getopts::Occur::Optional);
-    }
-
-    let matches = match parser.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { fatal!("{}", f) }
-    };
-
-    if matches.opt_present("h") {
-        usage(parser);
-    }
-
-    let bounds = (
-        matches.opt_str("duration").map(|v| parse_offset(&v, "duration")),
-        matches.opt_str("begin").map(|v| parse_offset(&v, "begin")),
-        matches.opt_str("end").map(|v| parse_offset(&v, "end")),
-    );
-
-    let (begin, end) = match bounds {
+    let opts = Opts::from_args();
+    let (begin, end) = match (opts.duration, opts.begin, opts.end) {
         (Some(_), Some(_), Some(_)) => {
             fatal!("cannot specify all of begin, end, and duration")
         },
@@ -180,30 +122,21 @@ fn main() {
         }
     };
 
-    if matches.free.is_empty() {
-        fatal!("must specify a data file");
-    }
-
     let mut config = Config { begin: begin, end: end, .. Default::default() };
-
-    match matches.opt_str("coalesce") {
-        Some(str) => match str.parse::<u64>() {
-            Err(_err) => fatal!("coalesce factor must be an integer"),
-            Ok(val) => config.maxrect = val
-        }
-        _ => {}
+    if let Some(val) = opts.coalesce {
+        config.maxrect = val;
     }
 
     let mut statemap = Statemap::new(&config);
 
-    match statemap.ingest(&matches.free[0]) {
-        Err(f) => { fatal!("could not ingest {}: {}", &matches.free[0], f); }
+    match statemap.ingest(&opts.file) {
+        Err(f) => { fatal!("could not ingest {}: {}", &opts.file, f); }
         Ok(k) => { k }
     }
 
     let mut svgconf: StatemapSVGConfig = Default::default();
 
-    svgconf.sortby = matches.opt_str("sortby");
+    svgconf.sortby = opts.sortby;
 
     match statemap.output_svg(&svgconf) {
         Err(f) => { fatal!("{}", f); }
