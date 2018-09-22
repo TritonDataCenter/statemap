@@ -133,6 +133,12 @@ fn main() {
             hint: "STATE",
             hasarg: HasArg::Yes
         },
+        Opt {
+            name: ("n", "dry-run"),
+            help: "ingest data, but do not generate output",
+            hint: "",
+            hasarg: HasArg::No
+        },
     ];
 
     let args: Vec<String> = env::args().collect();
@@ -217,6 +223,10 @@ fn main() {
     match statemap.ingest(&matches.free[0]) {
         Err(f) => { fatal!("could not ingest {}: {}", &matches.free[0], f); }
         Ok(k) => { k }
+    }
+
+    if matches.opt_present("dry-run") {
+        return;
     }
 
     let mut svgconf: StatemapSVGConfig = Default::default();
