@@ -96,11 +96,18 @@ var stateColors = function (states)
 
 var addTag = function (config, datum)
 {
+	var payload, tag;
+
 	if (!datum.json)
 		fatal('tag missing json: >>>%s<<<', dump(datum));
 
-	var payload = JSON.parse(datum.json);
-	var tag = payload.tag;
+	try {
+		payload = JSON.parse(datum.json);
+	} catch (err) {
+		fatal('tag payload failed to parse: >>>>%s<<<', datum.json);
+	}
+
+	tag = payload.tag;
 
 	if (!tag) {
 		if (!datum.hasOwnProperty('name') ||
@@ -711,6 +718,10 @@ var main = function ()
 		type: 'bool',
 		help: 'ignore tags in input'
 	}, {
+		names: [ 'dry-run', 'n' ],
+		type: 'bool',
+		help: 'ingest data, but do not generate output'
+	}, {
 		names: [ 'stateHeight', 'h' ],
 		type: 'number',
 		help: 'height of each state, in pixels'
@@ -807,7 +818,9 @@ var main = function ()
 			obj.data.push(datum);
 		}, config);
 
-		statemap(config, obj);
+		if (!opts.dry_run)
+			statemap(config, obj);
+
 		process.exit(0);
 	});
 };
