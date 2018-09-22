@@ -21,7 +21,8 @@ struct StatemapInputState {
 
 #[derive(Deserialize, Debug)]
 struct StatemapInputDatum {
-    time: String,                           // time of this datum
+    #[serde(deserialize_with = "datum_time_from_string")]
+    time: u64,                              // time of this datum
     entity: String,                         // name of entity
     state: u32,                             // state entity is in at time
 }
@@ -1062,13 +1063,8 @@ impl Statemap {
         match try_parse::<StatemapInputDatum>(payload) {
             Ok(None) => return Ok(Ingest::EndOfFile),
             Ok(Some(datum)) => {
-                let time: u64;
+                let time: u64 = datum.time;
                 let nstates: u32 = self.states.len() as u32;
-
-                match <u64>::from_str(&datum.time) {
-                    Ok(t) => time = t,
-                    _ => return self.err("illegal time value")
-                }
 
                 /*
                  * If the time of this datum is after our specified end time,
@@ -1582,6 +1578,21 @@ fn count_newlines(bytes: &[u8]) -> usize {
     bytes.iter().filter(|&&b| b == b'\n').count()
 }
 
+/*
+ * The time value is written in the input as a JSON string containing a number.
+ * Deserialize just the number here without allocating memory for a String.
+ */
+fn datum_time_from_string<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: &str = serde::Deserialize::deserialize(deserializer)?;
+    match u64::from_str(s) {
+        Ok(time) => Ok(time),
+        Err(_) => Err(serde::de::Error::custom("illegal time value")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1867,7 +1878,7 @@ mod tests {
     fn bad_datum_badtime_float() {
         bad_datum(None, r##"
             { "time": "156683.12", "entity": "foo", "state": 0 }
-        "##, "illegal time value");
+        "##, "unrecognized payload");
     }
 
     #[test]
