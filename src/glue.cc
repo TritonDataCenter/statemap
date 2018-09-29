@@ -141,6 +141,7 @@ loadConfig(Isolate *isolate, statemap_config_t *config, Local<Object> obj)
 	LOADCONFIG_INTFIELD(begin);
 	LOADCONFIG_INTFIELD(end);
 	LOADCONFIG_INTFIELD(notags);
+	LOADCONFIG_INTFIELD(dryrun);
 
 	return (0);
 }
@@ -202,12 +203,14 @@ ingest(const FunctionCallbackInfo<Value>& args)
 		return;
 	}
 
-	ingestEmitTags(args, statemap);
+	if (!config.smc_dryrun) {
+		ingestEmitTags(args, statemap);
 
-	for (entity = statemap->sm_entities; entity != NULL;
-	    entity = entity->sme_next) {
-		if (ingestEmitEntity(args, statemap, entity) != 0)
-			break;
+		for (entity = statemap->sm_entities; entity != NULL;
+		    entity = entity->sme_next) {
+			if (ingestEmitEntity(args, statemap, entity) != 0)
+				break;
+		}
 	}
 	
 	args.GetReturnValue().Set(v8::Number::New(isolate,

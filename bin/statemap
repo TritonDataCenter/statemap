@@ -795,6 +795,9 @@ var main = function ()
 		config.tags = [];
 	}
 
+	if (opts.dry_run)
+		config.dryrun = 1;
+
 	file = opts._args[0];
 
 	stream = mod_fs.createReadStream(file).pipe(mod_concatjson.parse());
@@ -810,6 +813,9 @@ var main = function ()
 		obj.data = [];
 
 		config.coalesced = mod_statemap.ingest(file, function (datum) {
+			if (opts.dry_run)
+				return;
+
 			if (!datum.hasOwnProperty('entity')) {
 				addTag(config, datum);
 				return;
