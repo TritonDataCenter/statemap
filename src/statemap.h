@@ -33,6 +33,7 @@ typedef struct statemap_config {
 	int64_t smc_begin;			/* offset to begin, if any */
 	int64_t smc_end;			/* offset to end, if any */
 	int smc_notags;				/* boolean: ignore tags */
+	int smc_dryrun;				/* boolean: dry run */
 } statemap_config_t;
 
 struct statemap_entity;
