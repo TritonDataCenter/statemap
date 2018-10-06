@@ -290,7 +290,7 @@ impl StatemapRect {
             states: vec![0; nstates as usize],
             prev: None,
             next: None,
-            weight: duration
+            weight: duration,
         };
 
         r.states[state as usize] = duration;
@@ -1216,11 +1216,11 @@ impl Statemap {
                 Ok(Ingest::EndOfFile) => break,
                 Err(err) => {
                     /*
-                     * Lazily compute line number for error message.
+                     * Lazily compute the line number for our error message.
                      */
                     let remaining_len = contents.len();
                     let byte_offset = len - remaining_len;
-                    let line = 1 + count_newlines(&mmap[..byte_offset]);
+                    let line = line_number(&mmap, byte_offset);
                     let message =
                         format!("illegal datum on line {}: {}", line, err);
                     return self.err(&message);
@@ -1574,8 +1574,24 @@ where
     }
 }
 
-fn count_newlines(bytes: &[u8]) -> usize {
-    bytes.iter().filter(|&&b| b == b'\n').count()
+fn line_number(mmap: &[u8], byte_offset: usize) -> usize {
+    let mut nls = mmap[..byte_offset].iter().filter(|&&b| b == b'\n').count();
+
+    /*
+     * We report the line number of the first non-whitespace character after
+     * byte_offset.
+     */
+    for b in mmap[byte_offset..].iter() {
+        if *b == b'\n' {
+            nls += 1;
+        }
+
+        if !((*b as char).is_whitespace()) {
+            break;
+        }
+    }
+
+    nls + 1
 }
 
 /*
@@ -1596,6 +1612,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+    use std::process;
+    use std::fs;
+    use std::io::Write;
 
     fn metadata(config: Option<&Config>, mut metadata: &str) -> Statemap {
         let mut statemap;
@@ -1681,6 +1701,47 @@ mod tests {
             },
             Ok(_) => { panic!("bad datum succeeded!"); }
         }
+    }
+
+    fn statemap_ingest(statemap: &mut Statemap, raw: &str)
+        -> Result<(), Box<Error>>
+    {
+        let mut path = env::temp_dir();
+        path.push(format!("statemap.test.{}.{:p}", process::id(), statemap));
+
+        let filename = path.to_str().unwrap();
+        let mut file = File::create(filename)?;
+        file.write_all(raw.as_bytes())?;
+
+        let result = statemap.ingest(filename);
+
+        fs::remove_file(filename)?;
+
+        result
+    }
+
+    fn bad_statemap(raw: &str, expected: &str) {
+        let config: Config = Default::default();
+        let mut statemap = Statemap::new(&config);
+
+        match statemap_ingest(&mut statemap, raw) {
+            Err(err) => {
+                let errmsg = format!("{}\n", err);
+
+                if errmsg.find(expected).is_none() {
+                    panic!("error ('{}') did not contain '{}' as expected",
+                        errmsg, expected);
+                }
+            },
+            Ok(_) => { panic!("bad statemap succeeded!"); }
+        }
+    }
+
+    macro_rules! bad_statemap {
+        ($what:expr) => ({
+            bad_statemap(include_str!(concat!("../tst/tst.", $what, ".in")),
+                include_str!(concat!("../tst/tst.", $what, ".err")));
+        });
     }
 
     #[test]
@@ -1820,6 +1881,21 @@ mod tests {
                 "one": {"value": 1 }
             }
         }"##, "has value (1) that conflicts");
+    }
+
+    #[test]
+    fn bad_line_basic() {
+        bad_statemap!("bad_line_basic");
+    }
+
+    #[test]
+    fn bad_line_whitespace() {
+        bad_statemap!("bad_line_whitespace");
+    }
+
+    #[test]
+    fn bad_line_newline() {
+        bad_statemap!("bad_line_newline");
     }
 
     #[test]

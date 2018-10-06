@@ -1,0 +1,37 @@
+{
+        "start": [ 1527898727, 987783377 ],
+        "title": "PostgreSQL statemap on HA8SDNRD2, by process ID",
+        "host": "HA8SDNRD2",
+        "entityKind": "Process",
+        "states": {
+                "on-cpu": {"value": 0, "color": "#DAF7A6" },
+                "off-cpu-waiting": {"value": 1, "color": "#f9f9f9" },
+                "off-cpu-semop": {"value": 2, "color": "#FF5733" },
+                "off-cpu-blocked": {"value": 3, "color": "#C70039" },
+                "off-cpu-zfs-read": {"value": 4, "color": "#FFC300" },
+                "off-cpu-zfs-write": {"value": 5, "color": "#338AFF" },
+                "off-cpu-zil-commit": {"value": 6, "color": "#66FFCC" },
+                "off-cpu-tx-wait": {"value": 7, "color": "#CCFF00" },
+                "off-cpu-dead": {"value": 8, "color": "#E0E0E0" }
+        }
+}
+{ "time": "90774", "entity": "586684", "state": 0 }
+{ "time": "129359", "entity": "586680", "state": 1 }
+{ "time": "184733", "entity": "586661", "state": 7 }
+{ "time": "189017", "entity": "586816", "state": 0 }
+{ "time": "273768", "entity": "586696", "state": 4 }
+{ "time": "301002", "entity": "586680", "state": 0 }
+{ "time": "310276", "entity": "586654", "state": 0 }
+{ "time": "321186", "entity": "587470", "state": 0 }
+{ "time": "397567", "entity": "586818", "state": 0 }
+{ "time": "422987", "entity": "586680", "state": 1 }
+{ "time": "475881", "entity": "586688", "state": 0 }   
+{ "badrecord": "480090", "entity": "586818", "state": 1 }
+
+{ "time": "488177", "entity": "586684", "state": 7 }
+{ "time": "508238", "entity": "586749", "state": 0 }
+{ "time": "572155", "entity": "586677", "state": 1 }
+{ "time": "585023", "entity": "587481", "state": 7 }
+{ "time": "607816", "entity": "586749", "state": 1 }
+{ "time": "616968", "entity": "586818", "state": 0 }
+{ "time": "642186", "entity": "586680", "state": 0 }
