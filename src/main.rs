@@ -15,6 +15,9 @@ use std::env;
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate serde_json;
+
 mod statemap;
 
 use statemap::*;
@@ -94,6 +97,7 @@ fn main() {
         help: &'static str,
         hint: &'static str,
         hasarg: HasArg,
+        alias: Option<&'static str>,
     }
 
     let opts: &[Opt] = &[
@@ -101,47 +105,84 @@ fn main() {
             name: ("b", "begin"),
             help: "time offset at which to begin statemap",
             hint: "TIME",
-            hasarg: HasArg::Yes
+            hasarg: HasArg::Yes,
+            alias: None,
         },
         Opt {
             name: ("e", "end"),
             help: "time offset at which to end statemap",
             hint: "TIME",
-            hasarg: HasArg::Yes
+            hasarg: HasArg::Yes,
+            alias: None,
         },
         Opt {
             name: ("d", "duration"),
             help: "time duration of statemap",
             hint: "TIME",
-            hasarg: HasArg::Yes
+            hasarg: HasArg::Yes,
+            alias: None,
         },
         Opt {
             name: ("c", "coalesce"),
             help: "coalesce target",
             hint: "TARGET",
-            hasarg: HasArg::Yes
+            hasarg: HasArg::Yes,
+            alias: None,
         },
         Opt {
-            name: ("h", "help"),
+            name: ("?", "help"),
             help: "print this usage message",
             hint: "",
-            hasarg: HasArg::No
+            hasarg: HasArg::No,
+            alias: None,
         },
         Opt {
             name: ("s", "sortby"),
             help: "state to sort by (defaults to entity name)",
             hint: "STATE",
-            hasarg: HasArg::Yes
+            hasarg: HasArg::Yes,
+            alias: None,
+        },
+        Opt {
+            name: ("i", "ignore-tags"),
+            help: "ignore tags in input",
+            hint: "",
+            hasarg: HasArg::No,
+            alias: Some("ignoreTags"),
+        },
+        Opt {
+            name: ("h", "state-height"),
+            help: "height of each state, in pixels",
+            hint: "PIXELS",
+            hasarg: HasArg::Yes,
+            alias: Some("stateHeight"),
         },
         Opt {
             name: ("n", "dry-run"),
             help: "ingest data, but do not generate output",
             hint: "",
-            hasarg: HasArg::No
+            hasarg: HasArg::No,
+            alias: None,
         },
     ];
 
-    let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
+
+    /*
+     * Iterate over our arguments and options, replacing any alias we find.
+     * This allows us to (silently -- and inelegantly) remain backward
+     * compatible with camel-cased options while moving to snake-cased ones.
+     */
+    for i in 0..args.len() {
+        for opt in opts {
+            if let Some(alias) = opt.alias {
+                if args[i].find(alias) != None {
+                    args[i] = args[i].replace(alias, opt.name.1);
+                }
+            }
+        }
+    }
+
     let mut parser = Options::new();
 
     /*
@@ -157,7 +198,7 @@ fn main() {
         Err(f) => { fatal!("{}", f) }
     };
 
-    if matches.opt_present("h") {
+    if matches.opt_present("help") {
         usage(parser);
     }
 
@@ -208,7 +249,12 @@ fn main() {
         fatal!("must specify a data file");
     }
 
-    let mut config = Config { begin: begin, end: end, .. Default::default() };
+    let mut config = Config {
+        begin: begin,
+        end: end,
+        notags: matches.opt_present("ignore-tags"),
+        .. Default::default()
+    };
 
     match matches.opt_str("coalesce") {
         Some(str) => match str.parse::<u64>() {
@@ -219,6 +265,16 @@ fn main() {
     }
 
     let mut statemap = Statemap::new(&config);
+    let mut svgconf: StatemapSVGConfig = Default::default();
+
+    svgconf.sortby = matches.opt_str("sortby");
+
+    if let Some(str) = matches.opt_str("state-height") {
+        match str.parse::<u32>() {
+            Err(_err) => fatal!("state height must be an integer"),
+            Ok(val) => svgconf.stripHeight = val
+        }
+    }
 
     match statemap.ingest(&matches.free[0]) {
         Err(f) => { fatal!("could not ingest {}: {}", &matches.free[0], f); }
@@ -228,10 +284,6 @@ fn main() {
     if matches.opt_present("dry-run") {
         return;
     }
-
-    let mut svgconf: StatemapSVGConfig = Default::default();
-
-    svgconf.sortby = matches.opt_str("sortby");
 
     match statemap.output_svg(&svgconf) {
         Err(f) => { fatal!("{}", f); }

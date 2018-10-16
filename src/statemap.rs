@@ -14,20 +14,24 @@ extern crate rand;
  * in the input file.
  */
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct StatemapInputState {
     color: Option<String>,                  // color for state, if any
     value: usize,                           // value for state
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct StatemapInputDatum {
     #[serde(deserialize_with = "datum_time_from_string")]
     time: u64,                              // time of this datum
     entity: String,                         // name of entity
     state: u32,                             // state entity is in at time
+    tag: Option<String>,                    // tag for this state, if any
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct StatemapInputDescription {
     entity: String,                         // name of entity
     description: String,                    // description of entity
@@ -35,6 +39,7 @@ struct StatemapInputDescription {
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
+#[serde(deny_unknown_fields)]
 struct StatemapInputMetadata {
     start: Vec<u64>,
     title: String,
@@ -44,11 +49,18 @@ struct StatemapInputMetadata {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct StatemapInputEvent {
     time: String,                           // time of this datum
     entity: String,                         // name of entity
     event: String,                          // type of event
     target: Option<String>,                 // target for event, if any
+}
+
+#[derive(Deserialize, Debug)]
+struct StatemapInputTag {
+    state: u32,                             // state for this tag
+    tag: String,                            // tag itself
 }
 
 #[derive(Copy,Clone,Debug)]
@@ -86,6 +98,7 @@ struct StatemapRect {
     states: Vec<u64>,                       // time spent in each state
     prev: Option<u64>,                      // previous rectangle
     next: Option<u64>,                      // next rectangle
+    tags: Option<HashMap<usize, u64>>,      // tags, if any
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -98,6 +111,7 @@ struct StatemapRectWeight {
 #[derive(Default,Clone,Debug,Serialize)]
 struct StatemapState {
     name: String,                           // name of this state
+    value: usize,                           // value for this state
     color: Option<String>,                  // color of this state, if any
 }
 
@@ -109,6 +123,7 @@ struct StatemapEntity {
     last: Option<u64>,                      // last start time
     start: Option<u64>,                     // current start time
     state: Option<u32>,                     // current state
+    tag: Option<usize>,                     // current tag, if any
     rects: HashMap<u64, RefCell<StatemapRect>>, // rectangles for this entity
 }
 
@@ -121,7 +136,8 @@ pub struct Statemap {
     entities: HashMap<String, StatemapEntity>, // hash of entities
     states: Vec<StatemapState>,             // vector of valid states
     byid: Vec<String>,                      // entities by ID
-    byweight: BTreeSet<StatemapRectWeight>  // rectangles by weight
+    byweight: BTreeSet<StatemapRectWeight>, // rectangles by weight
+    tags: HashMap<(u32, String), (Value, usize)>, // tags, if any
 }
 
 #[derive(Debug)]
@@ -161,6 +177,7 @@ use std::collections::HashSet;
 
 use self::memmap::MmapOptions;
 use self::palette::{Srgb, Color, Mix};
+use self::serde_json::Value;
 
 impl Default for Config {
     fn default() -> Config {
@@ -168,7 +185,7 @@ impl Default for Config {
             maxrect: 25000,
             begin: 0,
             end: 0,
-            notags: true,
+            notags: false,
         }
     }
 }
@@ -291,10 +308,24 @@ impl StatemapRect {
             prev: None,
             next: None,
             weight: duration,
+            tags: None,
         };
 
         r.states[state as usize] = duration;
         r
+    }
+}
+
+fn subsume_tags(stags: &mut HashMap<usize, u64>,
+    vtags: &mut HashMap<usize, u64>)
+{
+    for (id, duration) in vtags.drain() {
+        if let Some(d) = stags.get_mut(&id) {
+            *d += duration;
+            continue;
+        }
+
+        stags.insert(id, duration);
     }
 }
 
@@ -306,6 +337,7 @@ impl StatemapEntity {
             description: None,
             last: None,
             state: None,
+            tag: None,
             rects: HashMap::new(),
             id: id,
         }
@@ -315,10 +347,19 @@ impl StatemapEntity {
         -> (Option<(u64, u64, u64)>, (u64, u64))
     {
         let start = self.start.unwrap();
+        let state = self.state.unwrap();
         let lhs: Option<(u64, u64, u64)>;
         let rhs: (u64, u64);
-        let mut rect = StatemapRect::new(start,
-            end - start, self.state.unwrap(), nstates);
+        let mut rect = StatemapRect::new(start, end - start, state, nstates);
+
+        match self.tag {
+            Some(id) => {
+                let mut hash: HashMap<usize, u64> = HashMap::new();
+                hash.insert(id, end - start);
+                rect.tags = Some(hash);
+            }
+            _ => {}
+        }
 
         rect.prev = self.last;
 
@@ -444,7 +485,7 @@ impl StatemapEntity {
             }
 
             let mut s = left.borrow_mut();
-            let v = right.borrow();
+            let mut v = right.borrow_mut();
 
             s.next = v.next;
 
@@ -469,6 +510,23 @@ impl StatemapEntity {
 
             for i in 0..v.states.len() {
                 s.states[i] += v.states[i];
+            }
+
+            /*
+             * If our victim has tags, we need to fold them in.
+             */
+            if v.tags.is_some() && s.tags.is_none() {
+                s.tags = Some(HashMap::new());
+            }
+
+            match s.tags {
+                Some(ref mut stags) => {
+                    match v.tags {
+                        Some(ref mut vtags) => { subsume_tags(stags, vtags); },
+                        None => {}
+                    }
+                },
+                None => {}
             }
 
             subsumed = v.start;
@@ -545,10 +603,35 @@ impl StatemapEntity {
                 globals.pixelWidth as f64) + 0.4 as f64
         };
 
+        let output_tags = |rect: &StatemapRect, datum: &mut String| {
+            /*
+             * If we have tags, we emit them in ID order.
+             */
+            if let Some(ref tags) = rect.tags {
+                let mut g: Vec<(usize, u64)>;
+
+                datum.push_str(", g: {");
+
+                g = tags.iter()
+                    .map(|(&id, &duration)| { (id, duration) })
+                    .collect();
+
+                g.sort_unstable();
+
+                for j in 0..g.len() {
+                    let ratio = g[j].1 as f64 / rect.duration as f64;
+                    datum.push_str(&format!("'{}': {:.3}{}", g[j].0, ratio,
+                        if j < g.len() - 1 { "," } else { "" }));
+                }
+
+                datum.push_str("}");
+            }
+        };
+
         let mut x: f64;
         let mut map: Vec<u64>;
         let mut data: Vec<String> = vec![];
-        
+
         map = self.rects.values().map(|r| r.borrow().start).collect();
         map.sort();
 
@@ -589,8 +672,12 @@ impl StatemapEntity {
             if !blended {
                 assert!(state.is_some());
 
-                data.push(format!("{{ t: {}, s: {} }}",
-                    rect.start, state.unwrap()));
+                let mut datum = format!("{{ t: {}, s: {}", rect.start,
+                    state.unwrap());
+
+                output_tags(&rect, &mut datum);
+                datum.push_str("}");
+                data.push(datum);
 
                 println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                     r##"height="{}" onclick="mapclick(evt, {})" "##,
@@ -623,7 +710,10 @@ impl StatemapEntity {
                 }
             }
 
-            datum.push_str("} }");
+            datum.push_str("}");
+
+            output_tags(&rect, &mut datum);
+            datum.push_str("}");
             data.push(datum);
 
             println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
@@ -687,6 +777,20 @@ impl StatemapEntity {
             }
 
             assert_eq!(me.weight, weight);
+
+            if let Some(ref tags) = me.tags {
+                let duration = tags.iter().fold(0,
+                    |i, (_id, duration)| { i + duration });
+
+                /*
+                 * This is technically a more vigorous assertion than we can
+                 * make:  we actually allow for partial tagging in that not
+                 * all states must by tagged all of the time.  For the moment,
+                 * though, we assert that if any states have been tagged, all
+                 * have been.
+                 */
+                assert_eq!(duration, me.duration);
+            }
         }
     }
 
@@ -726,6 +830,7 @@ impl Statemap {
             byid: Vec::new(),
             byweight: BTreeSet::new(),
             metadata: None,
+            tags: HashMap::new(),
         }
     }
 
@@ -750,6 +855,31 @@ impl Statemap {
 
         self.entities.insert(name.to_string(), entity);
         self.entities.get_mut(name).unwrap()
+    }
+
+    fn tag_lookup(&mut self, state: u32, tagr: &Option<String>)
+        -> Option<usize>
+    {
+        if self.config.notags {
+            return None;
+        }
+
+        match *tagr {
+            Some(ref tag) => {
+                let id;
+
+                match self.tags.get(&(state, tag.to_string())) {
+                    Some(( _value, idr)) => { return Some(*idr); },
+                    None => { id = self.tags.len(); }
+                }
+
+                let value = json!({ "state": state, "tag": tag.to_string() });
+
+                self.tags.insert((state, tag.to_string()), (value, id));
+                Some(id)
+            },
+            None => None
+        }
     }
 
     /*
@@ -869,7 +999,9 @@ impl Statemap {
                 };
 
                 assert!(self.byweight.contains(&rweight) ||
-                    entity.rects.len() == 1);
+                    entity.rects.len() == 1 ||
+                    Some(rect.start) == entity.last ||
+                    rect.next == entity.last);
             }
         }
 
@@ -999,6 +1131,7 @@ impl Statemap {
 
             states[ndx] = Some(StatemapState {
                 name: key.to_string(),
+                value: ndx,
                 color: match value.color {
                     Some(ref str) => { Some(str.to_string()) },
                     None => { None }
@@ -1048,6 +1181,12 @@ impl Statemap {
                      * can safely ignore the return value.
                      */
                     entity.newrect(end, nstates);
+
+                    /*
+                     * Even though we expect no other ingestion, we set our
+                     * last to allow for state to be verified.
+                     */
+                    entity.last = entity.start;
                 },
                 _ => {}
             }
@@ -1082,6 +1221,7 @@ impl Statemap {
                 let mut errmsg: Option<String> = None;
                 let mut insert: Option<StatemapRectWeight> = None;
                 let mut update: Option<(StatemapRectWeight, u64)> = None;
+                let tag = self.tag_lookup(datum.state, &datum.tag);
 
                 /*
                  * We are going to do a lookup of our entity, but this will
@@ -1139,6 +1279,7 @@ impl Statemap {
 
                     entity.start = Some(time);
                     entity.state = Some(datum.state);
+                    entity.tag = tag;
                     break;
                 }
 
@@ -1184,6 +1325,33 @@ impl Statemap {
                 self.nevents += 1;
 
                 return Ok(Ingest::Success);
+            }
+            Err(_) => {}
+        }
+
+        match try_parse_raw::<StatemapInputTag>(payload) {
+            Ok(None) => return Ok(Ingest::EndOfFile),
+            Ok(Some((datum, value))) => {
+                if self.config.notags {
+                    return Ok(Ingest::Success);
+                }
+
+                /*
+                 * We allow tags to be redefined, so we need to first lookup
+                 * our tag to see if it exists -- and if it does, we need
+                 * to use the existing ID.
+                 */
+                let id;
+
+                match self.tags.get(&(datum.state, datum.tag.to_string())) {
+                    Some((_value, idr)) => { id = *idr }
+                    None => { id = self.tags.len() }
+                };
+
+                self.tags.insert((datum.state, datum.tag), (value, id));
+
+                return Ok(Ingest::Success);
+
             }
             Err(_) => {}
         }
@@ -1280,11 +1448,36 @@ impl Statemap {
         println!("  }}");
         println!("}};");
 
-        /*
-         * For now, we don't support tags at all.
-         */
-        println!("globals.tags = [];");
-        println!("globals.notags = true;");
+        if self.tags.len() > 0 {
+            /*
+             * Pull our tags into a Vec so we can sort them and emit them in
+             * array order.
+             */
+            let mut tags: Vec<(usize, u32, &str)> = vec![];
+
+            for ((state, tag), (_value, id)) in self.tags.iter() {
+                tags.push((*id, *state, tag));
+            }
+
+            tags.sort_unstable();
+
+            println!("globals.tags = [");
+
+            for i in 0..tags.len() {
+                let (value, id) =
+                    self.tags.get(&(tags[i].1, tags[i].2.to_string())).unwrap();
+
+                assert_eq!(i, *id);
+                println!("{}{}", serde_json::to_string_pretty(value).unwrap(),
+                    if i < tags.len() - 1 { "," } else { "" });
+            }
+
+            println!("];");
+            println!("globals.notags = false;");
+        } else {
+            println!("globals.tags = [];");
+            println!("globals.notags = true;");
+        }
 
         /*
          * Now drop in our in-SVG code.
@@ -1389,6 +1582,13 @@ impl Statemap {
                     r##"class="statemap-legendlabel sansserif">{}</text>"##),
                     x + (width / 2), y, self.states[state].name);
                 y += props.spacing;
+            }
+        };
+
+        let output_tagbox = || {
+            if !self.config.notags {
+                println!(r##"<g id="statemap-tagbox"></g>"##);
+                println!(r##"<g id="statemap-tagbox-select"></g>"##);
             }
         };
 
@@ -1515,7 +1715,7 @@ impl Statemap {
             let entity = self.entities.get(self.byid.get(e).unwrap()).unwrap();
 
             println!("{}", e);
-            data.insert(&entity.name, 
+            data.insert(&entity.name,
                 entity.output_svg(config, &globals, &colors, y));
             y += config.stripHeight;
         }
@@ -1552,6 +1752,8 @@ impl Statemap {
         props.y += props.height;
         output_legend(&props, &colors);
 
+        output_tagbox();
+
         println!("</svg>");
 
         Ok(())
@@ -1568,6 +1770,28 @@ where
         Some(Ok(value)) => {
             *content = &content[de.byte_offset()..];
             Ok(Some(value))
+        }
+        Some(Err(err)) => Err(err),
+        None => Ok(None),
+    }
+}
+
+fn try_parse_raw<'de, T>(content: &mut &'de str)
+    -> Result<Option<(T, serde_json::Value)>, serde_json::Error>
+where
+    T: serde::Deserialize<'de>
+{
+    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
+    let offset = de.byte_offset();
+
+    match de.next() {
+        Some(Ok(value)) => {
+            let v: serde_json::Value =
+                serde_json::from_str(&content[offset..de.byte_offset()])?;
+
+            *content = &content[de.byte_offset()..];
+
+            Ok(Some((value, v)))
         }
         Some(Err(err)) => Err(err),
         None => Ok(None),
@@ -1744,6 +1968,26 @@ mod tests {
         });
     }
 
+    fn good_statemap(raw: &str) -> Statemap {
+        let mut config: Config = Default::default();
+        config.notags = false;
+
+        let mut statemap = Statemap::new(&config);
+
+        match statemap_ingest(&mut statemap, raw) {
+            Err(err) => {
+                panic!("statemap failed: {}", err);
+            },
+            Ok(_) => { statemap }
+        }
+    }
+
+    macro_rules! good_statemap {
+        ($what:expr) => ({
+            good_statemap(include_str!(concat!("../tst/tst.", $what, ".in")))
+        })
+    }
+
     #[test]
     fn good_minimal() {
         metadata(None, r##"{
@@ -1831,7 +2075,7 @@ mod tests {
             "start": [ 0, 0 ],
             "title": "Foo",
             "states": {
-                "zero": {"notavalue": 0 }
+                "zero": {}
             }
         }"##, "missing field `value`");
     }
@@ -2050,6 +2294,24 @@ mod tests {
         statemap.subsume_apply_and_verify("foo", 300000);
         statemap.subsume_apply_and_verify("foo", 300000);
         statemap.subsume_apply_and_verify("foo", 200000);
+    }
+
+    #[test]
+    fn subsume_tagged() {
+        let mut statemap = data(None, vec![
+            r##"{ "time": "100", "entity": "foo", "state": 0, "tag": "a" }"##,
+            r##"{ "time": "200", "entity": "foo", "state": 1, "tag": "b" }"##,
+            r##"{ "time": "300", "entity": "foo", "state": 0, "tag": "c" }"##,
+            r##"{ "time": "400", "entity": "foo", "state": 1, "tag": "b" }"##,
+            r##"{ "time": "500", "entity": "foo", "state": 0, "tag": "a" }"##,
+            r##"{ "time": "600", "entity": "foo", "state": 1, "tag": "b" }"##
+        ]);
+
+        statemap.print("Initial load");
+        statemap.verify();
+        statemap.subsume_apply_and_verify("foo", 100);
+        statemap.subsume_apply_and_verify("foo", 300);
+        statemap.subsume_apply_and_verify("foo", 100);
     }
 
     #[test]
@@ -2397,5 +2659,19 @@ mod tests {
         let mix = color.mix_nonlinear(&other, ratio as f32);
 
         println!("color={}, other={}, mix={}", color, other, mix);
+    }
+
+    #[test]
+    fn tag_basic() {
+        let statemap = good_statemap!("tag_basic");
+        println!("{:?}", statemap.tags);
+        statemap.verify();
+    }
+
+    #[test]
+    fn tag_redefined() {
+        let statemap = good_statemap!("tag_redefined");
+        println!("{:?}", statemap.tags);
+        statemap.verify();
     }
 }

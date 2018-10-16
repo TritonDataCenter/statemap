@@ -1,0 +1,1089 @@
+{
+	"start": [ 1528482355, 856625707 ],
+	"title": "Statemap for CPU activity on HA8S7MRD2",
+	"host": "HA8S7MRD2",
+	"entityKind": "CPU",
+	"states": {
+		"uthread": {"value": 0, "color": "#9BC362" },
+		"kthread": {"value": 1, "color": "#2E4E00" },
+		"level-1": {"value": 2, "color": "#689D99" },
+		"level-2": {"value": 3, "color": "#41837E" },
+		"level-3": {"value": 4, "color": "#236863" },
+		"level-4": {"value": 5, "color": "#0D4E4A" },
+		"level-5": {"value": 6, "color": "#003430" },
+		"level-6": {"value": 7, "color": "#817FB2" },
+		"level-7": {"value": 8, "color": "#575594" },
+		"level-8": {"value": 9, "color": "#363377" },
+		"level-9": {"value": 10, "color": "#1C1A59" },
+		"level-10": {"value": 11, "color": "#0A093B" },
+		"level-11": {"value": 12, "color": "#FFAAAA" },
+		"level-12": {"value": 13, "color": "#D46A6A" },
+		"level-13": {"value": 14, "color": "#AA3939" },
+		"level-14": {"value": 15, "color": "#801515" },
+		"level-15": {"value": 16, "color": "#550000" },
+		"idle": {"value": 17, "color": "#e0e0e0" }
+	}
+}
+{ "time": "133694", "entity": "14", "state": 17 }
+{ "time": "133726", "entity": "0", "state": 17 }
+{ "time": "133731", "entity": "8", "state": 17 }
+{ "time": "133776", "entity": "12", "state": 17 }
+{ "time": "133779", "entity": "28", "state": 17 }
+{ "time": "133783", "entity": "20", "state": 17 }
+{ "time": "133819", "entity": "18", "state": 17 }
+{ "time": "133859", "entity": "5", "state": 17 }
+{ "time": "133863", "entity": "22", "state": 17 }
+{ "time": "133888", "entity": "11", "state": 17 }
+{ "time": "133917", "entity": "7", "state": 17 }
+{ "time": "133961", "entity": "3", "state": 17 }
+{ "time": "133979", "entity": "21", "state": 17 }
+{ "time": "134574", "entity": "9", "state": 17 }
+{ "time": "135203", "entity": "35", "state": 17 }
+{ "time": "136037", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "136389", "entity": "31", "state": 17 }
+{ "time": "136724", "entity": "17", "state": 17 }
+{ "time": "137094", "entity": "40", "state": 17 }
+{ "time": "137133", "entity": "46", "state": 17 }
+{ "time": "137348", "entity": "13", "state": 17 }
+{ "time": "137701", "entity": "6", "state": 17 }
+{ "time": "138148", "entity": "29", "state": 17 }
+{ "time": "138234", "entity": "1", "state": 17 }
+{ "time": "138244", "entity": "44", "state": 17 }
+{ "time": "139739", "entity": "41", "state": 0, "tag": "49a7f3e" }
+{ "time": "139979", "entity": "37", "state": 17 }
+{ "time": "141144", "entity": "25", "state": 17 }
+{ "time": "141240", "entity": "53", "state": 17 }
+{ "time": "141384", "entity": "32", "state": 17 }
+{ "time": "141553", "entity": "39", "state": 17 }
+{ "time": "141598", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "141960", "entity": "55", "state": 17 }
+{ "time": "141978", "entity": "27", "state": 17 }
+{ "time": "142181", "entity": "10", "state": 17 }
+{ "time": "142336", "entity": "28", "state": 15 }
+{ "time": "142496", "entity": "51", "state": 17 }
+{ "time": "142744", "entity": "23", "state": 17 }
+{ "time": "143454", "entity": "19", "state": 17 }
+{ "time": "143551", "entity": "47", "state": 17 }
+{ "time": "143638", "entity": "30", "state": 17 }
+{ "time": "144457", "entity": "33", "state": 17 }
+{ "time": "144680", "entity": "43", "state": 17 }
+{ "time": "144739", "entity": "15", "state": 17 }
+{ "time": "144784", "entity": "36", "state": 17 }
+{ "time": "145279", "entity": "50", "state": 17 }
+{ "time": "145292", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "145567", "entity": "42", "state": 17 }
+{ "time": "146407", "entity": "48", "state": 1, "tag": "3c4" }
+{ "time": "148558", "entity": "34", "state": 17 }
+{ "time": "148758", "entity": "38", "state": 17 }
+{ "time": "149461", "entity": "26", "state": 17 }
+{ "time": "149464", "entity": "54", "state": 17 }
+{ "time": "149917", "entity": "28", "state": 17 }
+{ "time": "151111", "entity": "24", "state": 17 }  
+{ "state": 2, "tag": "3", "driver": "softint", "instance": 0 }
+{ "time": "151161", "entity": "52", "state": 17 }
+{ "time": "158287", "entity": "28", "state": 3, "tag": "2" }
+{ "time": "159063", "entity": "49", "state": 17 }
+{ "state": 0, "tag": "4a0e384", "pid": "50378", "tid": "1", "execname": "dtrace", "psargs": "/usr/sbin/dtrace -Cs ./postgres-statemap-zfs.d" }
+{ "time": "170534", "entity": "28", "state": 17 }
+{ "time": "173279", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "state": 0, "tag": "49a7f42", "pid": "565192", "tid": "66", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "184732", "entity": "28", "state": 0, "tag": "49a7f42" }
+{ "time": "198289", "entity": "4", "state": 17 }
+{ "state": 0, "tag": "49a7f49", "pid": "565192", "tid": "74", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "215317", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "state": 0, "tag": "497cdd3", "pid": "565192", "tid": "19", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "236759", "entity": "28", "state": 17 }
+{ "time": "240371", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "245952", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "251572", "entity": "52", "state": 15 }
+{ "time": "256407", "entity": "4", "state": 17 }
+{ "time": "257895", "entity": "52", "state": 17 }
+{ "time": "263286", "entity": "52", "state": 3, "tag": "2" }
+{ "time": "273170", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "275226", "entity": "52", "state": 17 }
+{ "state": 0, "tag": "49a7f45", "pid": "565192", "tid": "70", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f32", "pid": "565192", "tid": "51", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "296823", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "298706", "entity": "0", "state": 16 }
+{ "time": "299990", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "state": 0, "tag": "49a7f46", "pid": "565192", "tid": "71", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "303706", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "307335", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "state": 0, "tag": "497cdd0", "pid": "565192", "tid": "16", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "4a0e388", "pid": "50380", "tid": "1", "execname": "pg_xlogdump", "psargs": "/opt/postgresql/current/bin/pg_xlogdump -f /manatee/pg/data/pg_xlog/00000001000" }
+{ "time": "311412", "entity": "4", "state": 17 }
+{ "time": "312858", "entity": "36", "state": 17 }
+{ "time": "315103", "entity": "1", "state": 16 }
+{ "time": "315435", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "320596", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "323738", "entity": "1", "state": 17 }
+{ "time": "324471", "entity": "41", "state": 17 }
+{ "time": "327464", "entity": "2", "state": 16 }
+{ "state": 0, "tag": "49a7f3e", "pid": "565192", "tid": "63", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "330894", "entity": "2", "state": 17 }
+{ "time": "333404", "entity": "41", "state": 0, "tag": "49a7f3e" }
+{ "time": "335503", "entity": "3", "state": 16 }
+{ "time": "341680", "entity": "3", "state": 17 }
+{ "time": "344099", "entity": "4", "state": 16 }
+{ "time": "347527", "entity": "45", "state": 17 }
+{ "time": "347942", "entity": "4", "state": 17 }
+{ "time": "351280", "entity": "5", "state": 16 }
+{ "state": 0, "tag": "49a7f2e", "pid": "565192", "tid": "47", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "355510", "entity": "5", "state": 17 }
+{ "time": "357571", "entity": "19", "state": 17 }
+{ "time": "359891", "entity": "6", "state": 16 }
+{ "time": "360586", "entity": "49", "state": 17 }
+{ "time": "365971", "entity": "6", "state": 17 }
+{ "time": "367461", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "368755", "entity": "7", "state": 16 }
+{ "time": "368815", "entity": "31", "state": 16 }
+{ "time": "369961", "entity": "10", "state": 16 }
+{ "time": "370707", "entity": "52", "state": 16 }
+{ "time": "371639", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "372586", "entity": "7", "state": 17 }
+{ "time": "372850", "entity": "14", "state": 17 }
+{ "time": "373621", "entity": "45", "state": 16 }
+{ "time": "375707", "entity": "8", "state": 16 }
+{ "time": "377134", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "377401", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "379466", "entity": "8", "state": 17 }
+{ "time": "380914", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "413422", "entity": "31", "state": 17 }
+{ "time": "449800", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "450431", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "state": 7, "tag": "ffffd062dbcb7d58", "driver": "ixgbe", "instance": 2 }
+{ "time": "468924", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "469468", "entity": "30", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "470025", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "471607", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "477875", "entity": "10", "state": 17 }
+{ "time": "484799", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "state": 0, "tag": "497cdd1", "pid": "565192", "tid": "17", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "485897", "entity": "4", "state": 17 }
+{ "time": "491362", "entity": "31", "state": 17 }
+{ "time": "491825", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "time": "492884", "entity": "30", "state": 17 }
+{ "time": "496488", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "state": 0, "tag": "48d4b6d", "pid": "5447", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "time": "503227", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "503832", "entity": "29", "state": 0, "tag": "48d4b6d" }
+{ "time": "506328", "entity": "11", "state": 17 }
+{ "time": "509977", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "state": 0, "tag": "497cdd4", "pid": "565192", "tid": "20", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "523775", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "state": 0, "tag": "497cd9f", "pid": "565192", "tid": "1", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "532235", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "state": 0, "tag": "4980fc2", "pid": "565192", "tid": "27", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "497cdd9", "pid": "565192", "tid": "24", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "time": "542614", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "546541", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "547085", "entity": "41", "state": 17 }
+{ "time": "549434", "entity": "11", "state": 17 }
+{ "time": "555295", "entity": "49", "state": 17 }
+{ "state": 0, "tag": "48d4b75", "pid": "5447", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "time": "557568", "entity": "4", "state": 17 }
+{ "time": "558415", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "559789", "entity": "53", "state": 17 }
+{ "time": "564353", "entity": "8", "state": 0, "tag": "48d4b75" }
+{ "time": "573039", "entity": "9", "state": 17 }
+{ "time": "576830", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "578248", "entity": "46", "state": 17 }
+{ "time": "586259", "entity": "8", "state": 17 }
+{ "time": "586378", "entity": "36", "state": 17 }
+{ "time": "591726", "entity": "49", "state": 17 }
+{ "time": "594180", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "606345", "entity": "31", "state": 17 }
+{ "time": "609029", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "615014", "entity": "53", "state": 17 }
+{ "time": "623515", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "635285", "entity": "45", "state": 17 }
+{ "time": "641951", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "642296", "entity": "31", "state": 17 }
+{ "time": "657898", "entity": "53", "state": 17 }
+{ "time": "658525", "entity": "52", "state": 17 }
+{ "time": "664378", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "668175", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "669848", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "671815", "entity": "22", "state": 17 }
+{ "time": "689085", "entity": "10", "state": 17 }
+{ "time": "696634", "entity": "49", "state": 17 }
+{ "time": "697889", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "699569", "entity": "19", "state": 17 }
+{ "time": "703265", "entity": "14", "state": 17 }
+{ "time": "718505", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "728522", "entity": "52", "state": 17 }
+{ "time": "735026", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "736636", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "739400", "entity": "0", "state": 15 }
+{ "time": "743280", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "state": 10, "tag": "b", "driver": "softint", "instance": 0 }
+{ "time": "747031", "entity": "0", "state": 11, "tag": "a" }
+{ "time": "752452", "entity": "10", "state": 17 }
+{ "time": "752901", "entity": "53", "state": 17 }
+{ "time": "753787", "entity": "49", "state": 17 }
+{ "time": "754077", "entity": "16", "state": 17 }
+{ "time": "762849", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "767901", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "775953", "entity": "19", "state": 17 }
+{ "time": "785696", "entity": "49", "state": 17 }
+{ "time": "786067", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "838177", "entity": "45", "state": 17 }
+{ "time": "901231", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "923069", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "927589", "entity": "19", "state": 17 }
+{ "time": "938479", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "947220", "entity": "31", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "961419", "entity": "45", "state": 17 }
+{ "time": "966595", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "975225", "entity": "31", "state": 17 }
+{ "state": 0, "tag": "48d4ade", "pid": "5336", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "time": "983732", "entity": "27", "state": 0, "tag": "48d4ade" }
+{ "time": "988698", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "1006460", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1018551", "entity": "49", "state": 17 }
+{ "time": "1020723", "entity": "53", "state": 17 }
+{ "time": "1025056", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "1029210", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "1031701", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "state": 0, "tag": "48d4ae8", "pid": "5336", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "time": "1040160", "entity": "52", "state": 17 }
+{ "time": "1045495", "entity": "21", "state": 0, "tag": "48d4ae8" }
+{ "time": "1053860", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1056323", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1063767", "entity": "21", "state": 17 }
+{ "time": "1064227", "entity": "10", "state": 17 }
+{ "time": "1070591", "entity": "14", "state": 17 }
+{ "time": "1076581", "entity": "49", "state": 17 }
+{ "time": "1076899", "entity": "53", "state": 17 }
+{ "time": "1079487", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1085729", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "1104374", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "1113664", "entity": "52", "state": 17 }
+{ "time": "1117162", "entity": "53", "state": 17 }
+{ "time": "1119151", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1119914", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1123006", "entity": "49", "state": 17 }
+{ "state": 0, "tag": "4a0e383", "pid": "50377", "tid": "1", "execname": "dtrace", "psargs": "/usr/sbin/dtrace -Cs ./cpu-statemap-tagged.d" }
+{ "time": "1128525", "entity": "16", "state": 0, "tag": "4a0e383" }
+{ "time": "1133011", "entity": "9", "state": 16 }
+{ "time": "1137190", "entity": "9", "state": 17 }
+{ "time": "1137845", "entity": "10", "state": 17 }
+{ "time": "1143092", "entity": "10", "state": 16 }
+{ "time": "1149172", "entity": "10", "state": 17 }
+{ "time": "1151888", "entity": "11", "state": 16 }
+{ "time": "1153362", "entity": "45", "state": 17 }
+{ "time": "1154832", "entity": "52", "state": 17 }
+{ "time": "1156133", "entity": "11", "state": 17 }
+{ "time": "1156908", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1159816", "entity": "12", "state": 16 }
+{ "time": "1160547", "entity": "30", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "1162840", "entity": "12", "state": 17 }
+{ "time": "1166278", "entity": "19", "state": 17 }
+{ "time": "1166405", "entity": "13", "state": 16 }
+{ "time": "1170340", "entity": "22", "state": 17 }
+{ "time": "1171318", "entity": "13", "state": 17 }
+{ "time": "1173640", "entity": "30", "state": 17 }
+{ "time": "1173786", "entity": "14", "state": 16 }
+{ "time": "1177357", "entity": "14", "state": 17 }
+{ "state": 0, "tag": "48d4ced", "pid": "5737", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2023 -k 3023" }
+{ "time": "1184808", "entity": "15", "state": 0, "tag": "48d4ced" }
+{ "time": "1188092", "entity": "15", "state": 16 }
+{ "time": "1192735", "entity": "15", "state": 0, "tag": "48d4ced" }
+{ "time": "1201969", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1205236", "entity": "17", "state": 16 }
+{ "time": "1213509", "entity": "17", "state": 17 }
+{ "time": "1214693", "entity": "18", "state": 16 }
+{ "time": "1217933", "entity": "31", "state": 17 }
+{ "time": "1218025", "entity": "18", "state": 17 }
+{ "time": "1222783", "entity": "19", "state": 16 }
+{ "time": "1223052", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1231369", "entity": "19", "state": 17 }
+{ "time": "1234496", "entity": "20", "state": 16 }
+{ "state": 0, "tag": "48d4d00", "pid": "5737", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2023 -k 3023" }
+{ "time": "1239245", "entity": "20", "state": 17 }
+{ "time": "1239831", "entity": "22", "state": 17 }
+{ "time": "1240063", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "1241645", "entity": "21", "state": 16 }
+{ "time": "1242848", "entity": "41", "state": 0, "tag": "48d4d00" }
+{ "time": "1247578", "entity": "21", "state": 17 }
+{ "time": "1250339", "entity": "22", "state": 16 }
+{ "time": "1254272", "entity": "22", "state": 17 }
+{ "time": "1254559", "entity": "41", "state": 17 }
+{ "time": "1256915", "entity": "23", "state": 16 }
+{ "time": "1261109", "entity": "23", "state": 17 }
+{ "time": "1264991", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1265886", "entity": "24", "state": 16 }
+{ "state": 0, "tag": "497d20a", "pid": "566150", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "time": "1274130", "entity": "24", "state": 17 }
+{ "time": "1275439", "entity": "25", "state": 16 }
+{ "time": "1278104", "entity": "2", "state": 0, "tag": "497d20a" }
+{ "time": "1280783", "entity": "25", "state": 17 }
+{ "time": "1284410", "entity": "26", "state": 16 }
+{ "time": "1285340", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1290577", "entity": "26", "state": 17 }
+{ "time": "1293829", "entity": "27", "state": 16 }
+{ "time": "1299840", "entity": "27", "state": 0, "tag": "48d4ade" }
+{ "time": "1301420", "entity": "22", "state": 17 }
+{ "time": "1302605", "entity": "28", "state": 16 }
+{ "time": "1305409", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1307933", "entity": "28", "state": 17 }
+{ "time": "1311223", "entity": "29", "state": 16 }
+{ "time": "1318349", "entity": "29", "state": 0, "tag": "48d4b6d" }
+{ "time": "1320548", "entity": "30", "state": 16 }
+{ "time": "1324450", "entity": "30", "state": 17 }
+{ "time": "1326355", "entity": "31", "state": 17 }
+{ "time": "1328330", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1328586", "entity": "22", "state": 17 }
+{ "time": "1328695", "entity": "31", "state": 16 }
+{ "time": "1332677", "entity": "31", "state": 17 }
+{ "time": "1336344", "entity": "32", "state": 16 }
+{ "time": "1340039", "entity": "32", "state": 17 }
+{ "time": "1342203", "entity": "33", "state": 16 }
+{ "time": "1345521", "entity": "33", "state": 17 }
+{ "time": "1349615", "entity": "34", "state": 16 }
+{ "time": "1354008", "entity": "34", "state": 17 }
+{ "time": "1356043", "entity": "35", "state": 16 }
+{ "time": "1359384", "entity": "35", "state": 17 }
+{ "time": "1361625", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1362681", "entity": "36", "state": 16 }
+{ "time": "1366323", "entity": "36", "state": 17 }
+{ "time": "1367733", "entity": "30", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "1369031", "entity": "45", "state": 17 }
+{ "time": "1369266", "entity": "37", "state": 16 }
+{ "time": "1372514", "entity": "37", "state": 17 }
+{ "time": "1378625", "entity": "38", "state": 16 }
+{ "time": "1379993", "entity": "2", "state": 17 }
+{ "time": "1386771", "entity": "30", "state": 17 }
+{ "time": "1387798", "entity": "38", "state": 17 }
+{ "time": "1387821", "entity": "22", "state": 17 }
+{ "time": "1388067", "entity": "39", "state": 16 }
+{ "time": "1388228", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1391467", "entity": "39", "state": 17 }
+{ "time": "1393949", "entity": "40", "state": 16 }
+{ "time": "1395988", "entity": "40", "state": 17 }
+{ "time": "1399028", "entity": "41", "state": 16 }
+{ "time": "1402723", "entity": "41", "state": 17 }
+{ "time": "1406240", "entity": "42", "state": 16 }
+{ "time": "1408563", "entity": "42", "state": 17 }
+{ "time": "1412926", "entity": "43", "state": 16 }
+{ "time": "1418481", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1418781", "entity": "43", "state": 17 }
+{ "time": "1421034", "entity": "44", "state": 16 }
+{ "time": "1424874", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "1424927", "entity": "44", "state": 17 }
+{ "time": "1428749", "entity": "45", "state": 16 }
+{ "time": "1431809", "entity": "10", "state": 17 }
+{ "time": "1436972", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1438380", "entity": "46", "state": 16 }
+{ "time": "1440527", "entity": "46", "state": 17 }
+{ "time": "1444400", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1448049", "entity": "47", "state": 16 }
+{ "time": "1449582", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "state": 0, "tag": "497d212", "pid": "566158", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "time": "1456559", "entity": "37", "state": 0, "tag": "497d212" }
+{ "time": "1458812", "entity": "47", "state": 17 }
+{ "time": "1459196", "entity": "19", "state": 17 }
+{ "time": "1459808", "entity": "48", "state": 16 }
+{ "time": "1460858", "entity": "14", "state": 17 }
+{ "time": "1462700", "entity": "22", "state": 17 }
+{ "time": "1463447", "entity": "48", "state": 1, "tag": "3c4" }
+{ "time": "1466417", "entity": "49", "state": 16 }
+{ "time": "1469928", "entity": "49", "state": 17 }
+{ "time": "1475559", "entity": "50", "state": 16 }
+{ "time": "1476464", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1480197", "entity": "50", "state": 17 }
+{ "state": 0, "tag": "48d4e10", "pid": "5958", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2024 -k 3024" }
+{ "time": "1481808", "entity": "51", "state": 16 }
+{ "time": "1484985", "entity": "51", "state": 17 }
+{ "time": "1490063", "entity": "52", "state": 16 }
+{ "time": "1491640", "entity": "45", "state": 0, "tag": "48d4e10" }
+{ "time": "1498337", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1499681", "entity": "53", "state": 16 }
+{ "time": "1503542", "entity": "53", "state": 17 }
+{ "time": "1507553", "entity": "54", "state": 16 }
+{ "time": "1507610", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1511913", "entity": "54", "state": 17 }
+{ "time": "1514247", "entity": "10", "state": 17 }
+{ "time": "1515873", "entity": "55", "state": 16 }
+{ "time": "1520140", "entity": "22", "state": 17 }
+{ "time": "1522315", "entity": "55", "state": 17 }
+{ "time": "1527856", "entity": "27", "state": 17 }
+{ "time": "1531660", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1540257", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1550117", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "1557017", "entity": "31", "state": 17 }
+{ "time": "1563796", "entity": "27", "state": 0, "tag": "48d4ade" }
+{ "time": "1566090", "entity": "22", "state": 17 }
+{ "time": "1566148", "entity": "45", "state": 0, "tag": "48d4e10" }
+{ "time": "1566354", "entity": "52", "state": 17 }
+{ "time": "1568814", "entity": "2", "state": 0, "tag": "497d20a" }
+{ "time": "1570616", "entity": "9", "state": 15 }
+{ "time": "1571878", "entity": "46", "state": 15 }
+{ "time": "1573357", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1573496", "entity": "46", "state": 17 }
+{ "time": "1574862", "entity": "9", "state": 17 }
+{ "time": "1576428", "entity": "46", "state": 3, "tag": "2" }
+{ "time": "1576608", "entity": "37", "state": 17 }
+{ "time": "1578950", "entity": "8", "state": 15 }
+{ "time": "1579862", "entity": "9", "state": 3, "tag": "2" }
+{ "time": "1581274", "entity": "8", "state": 17 }
+{ "time": "1582362", "entity": "46", "state": 17 }
+{ "time": "1584227", "entity": "8", "state": 3, "tag": "2" }
+{ "time": "1586328", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "1590277", "entity": "8", "state": 17 }
+{ "time": "1590464", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1590591", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1591543", "entity": "9", "state": 17 }
+{ "time": "1594956", "entity": "8", "state": 0, "tag": "48d4b75" }
+{ "time": "1600794", "entity": "29", "state": 17 }
+{ "time": "1601223", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "1601876", "entity": "8", "state": 17 }
+{ "time": "1602851", "entity": "22", "state": 17 }
+{ "time": "1612606", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1619928", "entity": "10", "state": 17 }
+{ "time": "1621241", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1622825", "entity": "9", "state": 17 }
+{ "time": "1625312", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1639370", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "1640702", "entity": "31", "state": 17 }
+{ "time": "1678850", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1680520", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "1692340", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "1694963", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "1700982", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "1706068", "entity": "46", "state": 0, "tag": "48d4e10" }
+{ "time": "1713100", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "1717396", "entity": "31", "state": 17 }
+{ "time": "1718374", "entity": "1", "state": 0, "tag": "48d4e10" }
+{ "time": "1721948", "entity": "9", "state": 16 }
+{ "time": "1722376", "entity": "22", "state": 16 }
+{ "time": "1722398", "entity": "36", "state": 16 }
+{ "time": "1722545", "entity": "46", "state": 16 }
+{ "time": "1723026", "entity": "10", "state": 16 }
+{ "time": "1723152", "entity": "49", "state": 16 }
+{ "time": "1723829", "entity": "53", "state": 16 }
+{ "time": "1723893", "entity": "19", "state": 16 }
+{ "time": "1724110", "entity": "45", "state": 16 }
+{ "time": "1724830", "entity": "52", "state": 16 }
+{ "time": "1725469", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "1725641", "entity": "49", "state": 17 }
+{ "time": "1725958", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "1726469", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "1726734", "entity": "22", "state": 0, "tag": "497cdd4" }
+{ "time": "1727245", "entity": "53", "state": 0, "tag": "497cd9f" }
+{ "time": "1727648", "entity": "37", "state": 0, "tag": "497d212" }
+{ "time": "1727681", "entity": "49", "state": 17 }
+{ "time": "1730123", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1730633", "entity": "19", "state": 0, "tag": "49a7f32" }
+{ "time": "1731250", "entity": "45", "state": 0, "tag": "49a7f2e" }
+{ "time": "1731403", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1732151", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "1739845", "entity": "0", "state": 15 }
+{ "time": "1746589", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "1749918", "entity": "0", "state": 11, "tag": "a" }
+{ "time": "1751913", "entity": "31", "state": 0, "tag": "49a7f46" }
+{ "time": "1752389", "entity": "27", "state": 17 }
+{ "state": 0, "tag": "497d4e2", "pid": "566865", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "time": "1755671", "entity": "36", "state": 17 }
+{ "time": "1758552", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "state": 0, "tag": "48d4e18", "pid": "5958", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2024 -k 3024" }
+{ "time": "1767581", "entity": "50", "state": 0, "tag": "48d4e18" }
+{ "time": "1767920", "entity": "26", "state": 0, "tag": "497d4e2" }
+{ "time": "1768630", "entity": "19", "state": 17 }
+{ "time": "1774944", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "1776434", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "time": "1778474", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "1783434", "entity": "11", "state": 17 }
+{ "time": "1785617", "entity": "15", "state": 17 }
+{ "time": "1789972", "entity": "50", "state": 17 }
+{ "time": "1790371", "entity": "31", "state": 17 }
+{ "time": "1798662", "entity": "22", "state": 17 }
+{ "time": "1799659", "entity": "53", "state": 17 }
+{ "time": "1799775", "entity": "49", "state": 17 }
+{ "time": "1800147", "entity": "45", "state": 17 }
+{ "time": "1802644", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "1804234", "entity": "9", "state": 17 }
+{ "time": "1804314", "entity": "17", "state": 0, "tag": "49a7f2e" }
+{ "time": "1815421", "entity": "52", "state": 17 }
+{ "time": "1831927", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "1842650", "entity": "49", "state": 17 }
+{ "time": "1853453", "entity": "46", "state": 17 }
+{ "time": "1854478", "entity": "47", "state": 17 }
+{ "time": "1857286", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "1857662", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "1860962", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "1861543", "entity": "36", "state": 17 }
+{ "time": "1863742", "entity": "4", "state": 17 }
+{ "time": "1865505", "entity": "17", "state": 17 }
+{ "time": "1866888", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "1868188", "entity": "46", "state": 17 }
+{ "time": "1885355", "entity": "10", "state": 17 }
+{ "time": "1891052", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "1908947", "entity": "14", "state": 17 }
+{ "time": "1928141", "entity": "46", "state": 0, "tag": "497cdd9" }
+{ "time": "1973538", "entity": "4", "state": 17 }
+{ "time": "2013125", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "2027694", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "2034820", "entity": "17", "state": 0, "tag": "49a7f2e" }
+{ "time": "2051826", "entity": "46", "state": 17 }
+{ "time": "2057896", "entity": "21", "state": 15 }
+{ "time": "2060651", "entity": "36", "state": 17 }
+{ "time": "2061335", "entity": "21", "state": 17 }
+{ "time": "2063578", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "2064235", "entity": "21", "state": 3, "tag": "2" }
+{ "time": "2068218", "entity": "4", "state": 17 }
+{ "time": "2070666", "entity": "21", "state": 17 }
+{ "time": "2076440", "entity": "21", "state": 0, "tag": "48d4ae8" }
+{ "time": "2084643", "entity": "21", "state": 17 }
+{ "time": "2088885", "entity": "47", "state": 17 }
+{ "time": "2095628", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "2105539", "entity": "36", "state": 17 }
+{ "time": "2166276", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "2201863", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "2228637", "entity": "4", "state": 17 }
+{ "time": "2231212", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "2249903", "entity": "4", "state": 17 }
+{ "time": "2251762", "entity": "41", "state": 15 }
+{ "time": "2253203", "entity": "41", "state": 17 }
+{ "time": "2255393", "entity": "41", "state": 3, "tag": "2" }
+{ "time": "2260551", "entity": "41", "state": 17 }
+{ "time": "2264500", "entity": "41", "state": 0, "tag": "48d4d00" }
+{ "time": "2269824", "entity": "41", "state": 17 }
+{ "time": "2284834", "entity": "10", "state": 17 }
+{ "time": "2291061", "entity": "52", "state": 17 }
+{ "time": "2301592", "entity": "29", "state": 0, "tag": "48d4b6d" }
+{ "time": "2305757", "entity": "2", "state": 17 }
+{ "state": 0, "tag": "497e0d4", "pid": "569380", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "time": "2322704", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2323720", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "2327364", "entity": "19", "state": 0, "tag": "497e0d4" }
+{ "time": "2327891", "entity": "36", "state": 17 }
+{ "time": "2336478", "entity": "38", "state": 0, "tag": "48d4b75" }
+{ "time": "2350895", "entity": "1", "state": 17 }
+{ "time": "2360872", "entity": "38", "state": 17 }
+{ "time": "2362577", "entity": "14", "state": 17 }
+{ "time": "2373219", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "2401842", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "time": "2410496", "entity": "52", "state": 17 }
+{ "time": "2410586", "entity": "47", "state": 17 }
+{ "time": "2445800", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2446541", "entity": "27", "state": 0, "tag": "48d4ade" }
+{ "time": "2447611", "entity": "16", "state": 17 }
+{ "time": "2458415", "entity": "37", "state": 17 }
+{ "time": "2461516", "entity": "21", "state": 0, "tag": "48d4ae8" }
+{ "time": "2467039", "entity": "21", "state": 17 }
+{ "time": "2484067", "entity": "36", "state": 17 }
+{ "time": "2484984", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "2487284", "entity": "52", "state": 17 }
+{ "time": "2491074", "entity": "2", "state": 0, "tag": "497d20a" }
+{ "time": "2511956", "entity": "2", "state": 17 }
+{ "time": "2530247", "entity": "15", "state": 0, "tag": "48d4ced" }
+{ "time": "2546597", "entity": "41", "state": 0, "tag": "48d4d00" }
+{ "time": "2551849", "entity": "41", "state": 17 }
+{ "time": "2553991", "entity": "26", "state": 17 }
+{ "time": "2598265", "entity": "37", "state": 0, "tag": "497d212" }
+{ "time": "2612822", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2616846", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "2618688", "entity": "37", "state": 17 }
+{ "time": "2624719", "entity": "10", "state": 17 }
+{ "time": "2628302", "entity": "17", "state": 17 }
+{ "time": "2652173", "entity": "14", "state": 17 }
+{ "time": "2698733", "entity": "26", "state": 0, "tag": "497d4e2" }
+{ "time": "2713062", "entity": "15", "state": 17 }
+{ "time": "2718744", "entity": "17", "state": 0, "tag": "49a7f2e" }
+{ "time": "2738856", "entity": "11", "state": 15 }
+{ "time": "2739184", "entity": "53", "state": 15 }
+{ "time": "2739223", "entity": "13", "state": 15 }
+{ "time": "2739227", "entity": "33", "state": 15 }
+{ "time": "2739356", "entity": "35", "state": 15 }
+{ "time": "2739437", "entity": "0", "state": 15 }
+{ "time": "2739444", "entity": "22", "state": 15 }
+{ "time": "2739524", "entity": "23", "state": 15 }
+{ "time": "2739527", "entity": "12", "state": 15 }
+{ "time": "2739800", "entity": "21", "state": 15 }
+{ "time": "2739816", "entity": "36", "state": 15 }
+{ "time": "2739819", "entity": "49", "state": 15 }
+{ "time": "2739830", "entity": "14", "state": 15 }
+{ "time": "2739847", "entity": "48", "state": 15 }
+{ "time": "2739980", "entity": "15", "state": 15 }
+{ "time": "2740110", "entity": "16", "state": 15 }
+{ "time": "2740137", "entity": "37", "state": 15 }
+{ "time": "2740149", "entity": "4", "state": 15 }
+{ "time": "2740488", "entity": "30", "state": 15 }
+{ "time": "2740512", "entity": "32", "state": 15 }
+{ "time": "2740623", "entity": "11", "state": 17 }
+{ "time": "2740924", "entity": "52", "state": 15 }
+{ "time": "2741143", "entity": "1", "state": 15 }
+{ "time": "2741149", "entity": "29", "state": 15 }
+{ "time": "2741154", "entity": "10", "state": 15 }
+{ "time": "2741427", "entity": "26", "state": 15 }
+{ "time": "2741623", "entity": "33", "state": 17 }
+{ "time": "2741668", "entity": "53", "state": 17 }
+{ "time": "2741898", "entity": "12", "state": 17 }
+{ "time": "2742244", "entity": "13", "state": 17 }
+{ "time": "2742964", "entity": "21", "state": 17 }
+{ "time": "2743620", "entity": "23", "state": 17 }
+{ "time": "2743646", "entity": "49", "state": 17 }
+{ "time": "2743658", "entity": "35", "state": 17 }
+{ "time": "2743684", "entity": "11", "state": 11, "tag": "a" }
+{ "time": "2743960", "entity": "22", "state": 17 }
+{ "time": "2744663", "entity": "33", "state": 11, "tag": "a" }
+{ "time": "2744680", "entity": "53", "state": 11, "tag": "a" }
+{ "time": "2744789", "entity": "14", "state": 17 }
+{ "time": "2744980", "entity": "47", "state": 15 }
+{ "time": "2745068", "entity": "12", "state": 11, "tag": "a" }
+{ "time": "2745110", "entity": "36", "state": 17 }
+{ "time": "2745119", "entity": "15", "state": 17 }
+{ "time": "2745444", "entity": "21", "state": 11, "tag": "a" }
+{ "time": "2745609", "entity": "13", "state": 11, "tag": "a" }
+{ "time": "2745804", "entity": "48", "state": 1, "tag": "3c4" }
+{ "time": "2746183", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "2746302", "entity": "37", "state": 17 }
+{ "time": "2746306", "entity": "49", "state": 11, "tag": "a" }
+{ "time": "2746344", "entity": "16", "state": 17 }
+{ "time": "2746428", "entity": "23", "state": 11, "tag": "a" }
+{ "time": "2746493", "entity": "4", "state": 17 }
+{ "time": "2746496", "entity": "30", "state": 17 }
+{ "time": "2746569", "entity": "35", "state": 11, "tag": "a" }
+{ "time": "2746608", "entity": "32", "state": 17 }
+{ "time": "2747310", "entity": "22", "state": 11, "tag": "a" }
+{ "time": "2747848", "entity": "14", "state": 11, "tag": "a" }
+{ "time": "2748202", "entity": "1", "state": 17 }
+{ "time": "2748519", "entity": "0", "state": 11, "tag": "a" }
+{ "time": "2748767", "entity": "15", "state": 11, "tag": "a" }
+{ "time": "2748842", "entity": "36", "state": 11, "tag": "a" }
+{ "time": "2748989", "entity": "29", "state": 0, "tag": "48d4b6d" }
+{ "time": "2749477", "entity": "10", "state": 17 }
+{ "time": "2749892", "entity": "30", "state": 11, "tag": "a" }
+{ "time": "2749933", "entity": "16", "state": 11, "tag": "a" }
+{ "time": "2750103", "entity": "48", "state": 11, "tag": "a" }
+{ "time": "2750214", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2750477", "entity": "4", "state": 11, "tag": "a" }
+{ "time": "2750480", "entity": "32", "state": 11, "tag": "a" }
+{ "time": "2750619", "entity": "37", "state": 11, "tag": "a" }
+{ "time": "2751894", "entity": "26", "state": 0, "tag": "497d4e2" }
+{ "time": "2752222", "entity": "12", "state": 17 }
+{ "time": "2753033", "entity": "29", "state": 11, "tag": "a" }
+{ "time": "2753036", "entity": "1", "state": 11, "tag": "a" }
+{ "time": "2753619", "entity": "33", "state": 17 }
+{ "time": "2754750", "entity": "11", "state": 17 }
+{ "time": "2756235", "entity": "14", "state": 17 }
+{ "time": "2756564", "entity": "52", "state": 11, "tag": "a" }
+{ "time": "2756724", "entity": "10", "state": 11, "tag": "a" }
+{ "time": "2757240", "entity": "37", "state": 17 }
+{ "time": "2757510", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "2758979", "entity": "16", "state": 17 }
+{ "time": "2758984", "entity": "26", "state": 11, "tag": "a" }
+{ "state": 1, "tag": "508", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2762129", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "time": "2763958", "entity": "29", "state": 0, "tag": "48d4b6d" }
+{ "time": "2763992", "entity": "0", "state": 3, "tag": "2" }
+{ "time": "2764529", "entity": "48", "state": 1, "tag": "3c4" }
+{ "state": 1, "tag": "506", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "56b", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2765826", "entity": "0", "state": 0, "tag": "4a0e384" }
+{ "state": 1, "tag": "50c", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2766634", "entity": "47", "state": 11, "tag": "a" }
+{ "time": "2769168", "entity": "8", "state": 1, "tag": "508" }
+{ "time": "2769369", "entity": "15", "state": 17 }
+{ "time": "2769781", "entity": "16", "state": 1, "tag": "56b" }
+{ "time": "2770167", "entity": "50", "state": 1, "tag": "50c" }
+{ "time": "2770906", "entity": "11", "state": 1, "tag": "506" }
+{ "state": 1, "tag": "572", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2775305", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2775728", "entity": "10", "state": 17 }
+{ "state": 1, "tag": "589", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "511", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2778446", "entity": "32", "state": 17 }
+{ "state": 1, "tag": "563", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "588", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2779948", "entity": "6", "state": 1, "tag": "572" }
+{ "time": "2781106", "entity": "11", "state": 15 }
+{ "state": 1, "tag": "50f", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "591", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2781550", "entity": "18", "state": 1, "tag": "589" }
+{ "time": "2782610", "entity": "31", "state": 1, "tag": "563" }
+{ "time": "2782633", "entity": "8", "state": 1, "tag": "588" }
+{ "time": "2783057", "entity": "11", "state": 1, "tag": "506" }
+{ "time": "2783200", "entity": "20", "state": 1, "tag": "511" }
+{ "time": "2784164", "entity": "50", "state": 1, "tag": "591" }
+{ "state": 1, "tag": "568", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2785196", "entity": "11", "state": 3, "tag": "2" }
+{ "state": 1, "tag": "505", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2786380", "entity": "43", "state": 1, "tag": "50f" }
+{ "time": "2786979", "entity": "50", "state": 15 }
+{ "time": "2787490", "entity": "13", "state": 17 }
+{ "time": "2787981", "entity": "10", "state": 0, "tag": "497cdd0" }
+{ "state": 1, "tag": "494", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2789225", "entity": "32", "state": 1, "tag": "568" }
+{ "state": 1, "tag": "50b", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2789603", "entity": "11", "state": 1, "tag": "506" }
+{ "time": "2790250", "entity": "8", "state": 17 }
+{ "time": "2791044", "entity": "50", "state": 1, "tag": "591" }
+{ "state": 1, "tag": "50a", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2791330", "entity": "18", "state": 17 }
+{ "state": 1, "tag": "3a3", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2793174", "entity": "12", "state": 1, "tag": "50b" }
+{ "time": "2794514", "entity": "15", "state": 1, "tag": "50a" }
+{ "state": 1, "tag": "586", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "332", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "1a1", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "431", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2795661", "entity": "52", "state": 1, "tag": "494" }
+{ "time": "2795818", "entity": "24", "state": 1, "tag": "505" }
+{ "time": "2795870", "entity": "50", "state": 3, "tag": "2" }
+{ "time": "2796195", "entity": "32", "state": 17 }
+{ "state": 1, "tag": "149", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2796791", "entity": "6", "state": 17 }
+{ "time": "2796948", "entity": "31", "state": 1, "tag": "332" }
+{ "time": "2796998", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "state": 1, "tag": "2fc", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2797170", "entity": "20", "state": 17 }
+{ "time": "2797844", "entity": "22", "state": 17 }
+{ "time": "2798008", "entity": "13", "state": 1, "tag": "1a1" }
+{ "time": "2798180", "entity": "46", "state": 1, "tag": "431" }
+{ "state": 1, "tag": "53d", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2799503", "entity": "8", "state": 1, "tag": "149" }
+{ "time": "2799946", "entity": "9", "state": 1, "tag": "586" }
+{ "time": "2800495", "entity": "38", "state": 1, "tag": "3a3" }
+{ "time": "2801241", "entity": "43", "state": 1, "tag": "53d" }
+{ "time": "2801891", "entity": "50", "state": 1, "tag": "591" }
+{ "time": "2802030", "entity": "28", "state": 1, "tag": "2fc" }
+{ "time": "2802203", "entity": "11", "state": 17 }
+{ "time": "2802513", "entity": "15", "state": 17 }
+{ "time": "2804148", "entity": "22", "state": 0, "tag": "48d4e18" }
+{ "time": "2804983", "entity": "12", "state": 17 }
+{ "state": 1, "tag": "159", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "3c4", "thread": "zfs`dbuf_evict_thread", "taskq": "<none>" }
+{ "state": 1, "tag": "454", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2807716", "entity": "21", "state": 17 }
+{ "state": 1, "tag": "532", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2809330", "entity": "46", "state": 1, "tag": "3c4" }
+{ "time": "2809907", "entity": "9", "state": 1, "tag": "159" }
+{ "time": "2809959", "entity": "48", "state": 1, "tag": "454" }
+{ "state": 1, "tag": "401", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2812244", "entity": "22", "state": 17 }
+{ "time": "2812381", "entity": "38", "state": 17 }
+{ "time": "2812838", "entity": "50", "state": 1, "tag": "532" }
+{ "state": 1, "tag": "441", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2813618", "entity": "43", "state": 1, "tag": "401" }
+{ "time": "2813635", "entity": "24", "state": 17 }
+{ "time": "2813655", "entity": "4", "state": 17 }
+{ "state": 1, "tag": "201", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2816419", "entity": "31", "state": 17 }
+{ "state": 1, "tag": "109", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "4f0", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 7, "tag": "ffffd062dbd3caa0", "driver": "ixgbe", "instance": 0 }
+{ "time": "2817983", "entity": "13", "state": 17 }
+{ "time": "2818893", "entity": "4", "state": 1, "tag": "109" }
+{ "time": "2819739", "entity": "35", "state": 17 }
+{ "state": 1, "tag": "56f", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2820521", "entity": "44", "state": 1, "tag": "4f0" }
+{ "state": 1, "tag": "474", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2820846", "entity": "31", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "2821964", "entity": "4", "state": 17 }
+{ "time": "2822271", "entity": "47", "state": 1, "tag": "441" }
+{ "time": "2823215", "entity": "19", "state": 1, "tag": "201" }
+{ "time": "2823281", "entity": "28", "state": 17 }
+{ "time": "2823339", "entity": "50", "state": 1, "tag": "474" }
+{ "time": "2824040", "entity": "22", "state": 1, "tag": "56f" }
+{ "time": "2824727", "entity": "8", "state": 17 }
+{ "time": "2825090", "entity": "20", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2826403", "entity": "35", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "2827341", "entity": "15", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2827641", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2828147", "entity": "31", "state": 17 }
+{ "time": "2828240", "entity": "44", "state": 17 }
+{ "time": "2828434", "entity": "48", "state": 17 }
+{ "time": "2828810", "entity": "13", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2828928", "entity": "18", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "state": 1, "tag": "231", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2831848", "entity": "32", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "state": 1, "tag": "3b3", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2832759", "entity": "9", "state": 17 }
+{ "time": "2833726", "entity": "22", "state": 1, "tag": "231" }
+{ "time": "2834743", "entity": "39", "state": 1, "tag": "3b3" }
+{ "time": "2834868", "entity": "52", "state": 17 }
+{ "time": "2835340", "entity": "41", "state": 0, "tag": "497d212" }
+{ "time": "2836018", "entity": "20", "state": 17 }
+{ "time": "2836192", "entity": "15", "state": 17 }
+{ "time": "2836248", "entity": "35", "state": 17 }
+{ "time": "2836415", "entity": "19", "state": 0, "tag": "497e0d4" }
+{ "time": "2837835", "entity": "22", "state": 17 }
+{ "time": "2838427", "entity": "13", "state": 17 }
+{ "state": 1, "tag": "55c", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "421", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2841934", "entity": "50", "state": 17 }
+{ "time": "2842485", "entity": "16", "state": 17 }
+{ "time": "2842632", "entity": "43", "state": 17 }
+{ "time": "2842769", "entity": "26", "state": 0, "tag": "497d4e2" }
+{ "time": "2843248", "entity": "32", "state": 17 }
+{ "time": "2843749", "entity": "15", "state": 1, "tag": "55c" }
+{ "time": "2844586", "entity": "18", "state": 17 }
+{ "time": "2849706", "entity": "47", "state": 0, "tag": "49a7f32" }
+{ "time": "2850475", "entity": "23", "state": 17 }
+{ "state": 1, "tag": "547", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2851926", "entity": "45", "state": 1, "tag": "421" }
+{ "time": "2853387", "entity": "15", "state": 17 }
+{ "state": 1, "tag": "139", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2854482", "entity": "18", "state": 1, "tag": "547" }
+{ "time": "2857892", "entity": "27", "state": 17 }
+{ "time": "2858407", "entity": "7", "state": 1, "tag": "139" }
+{ "time": "2858890", "entity": "39", "state": 17 }
+{ "time": "2861162", "entity": "18", "state": 17 }
+{ "time": "2865228", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "2865239", "entity": "47", "state": 17 }
+{ "time": "2874241", "entity": "20", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2877147", "entity": "20", "state": 17 }
+{ "time": "2878100", "entity": "18", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2878417", "entity": "49", "state": 17 }
+{ "time": "2880266", "entity": "13", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "state": 1, "tag": "58a", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "48c0687", "thread": "mac`mac_srs_worker", "taskq": "<none>" }
+{ "time": "2881471", "entity": "7", "state": 17 }
+{ "time": "2882394", "entity": "4", "state": 1, "tag": "58a" }
+{ "time": "2882699", "entity": "18", "state": 17 }
+{ "time": "2884819", "entity": "21", "state": 1, "tag": "48c0687" }
+{ "time": "2885368", "entity": "13", "state": 17 }
+{ "time": "2892650", "entity": "4", "state": 17 }
+{ "state": 0, "tag": "497cdc5", "pid": "565220", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 1, "tag": "119", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2895882", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2896922", "entity": "21", "state": 17 }
+{ "time": "2898855", "entity": "23", "state": 0, "tag": "497cdc5" }
+{ "time": "2899081", "entity": "5", "state": 1, "tag": "119" }
+{ "state": 1, "tag": "2", "driver": "softint", "instance": 0 }
+{ "time": "2904722", "entity": "23", "state": 2, "tag": "1" }
+{ "time": "2905416", "entity": "45", "state": 17 }
+{ "state": 1, "tag": "353", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2908478", "entity": "23", "state": 0, "tag": "497cdc5" }
+{ "time": "2909051", "entity": "53", "state": 17 }
+{ "state": 1, "tag": "592", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2910797", "entity": "33", "state": 1, "tag": "353" }
+{ "time": "2912119", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "time": "2913138", "entity": "15", "state": 1, "tag": "592" }
+{ "time": "2914211", "entity": "29", "state": 17 }
+{ "time": "2918243", "entity": "1", "state": 17 }
+{ "time": "2918569", "entity": "33", "state": 17 }
+{ "state": 1, "tag": "4e9", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "245", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2921512", "entity": "15", "state": 17 }
+{ "time": "2921746", "entity": "5", "state": 17 }
+{ "time": "2923567", "entity": "52", "state": 2, "tag": "1" }
+{ "time": "2923665", "entity": "23", "state": 1, "tag": "245" }
+{ "time": "2923828", "entity": "29", "state": 1, "tag": "4e9" }
+{ "time": "2924126", "entity": "36", "state": 17 }
+{ "state": 1, "tag": "570", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2926812", "entity": "43", "state": 0, "tag": "48d4ced" }
+{ "time": "2927055", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "2927485", "entity": "5", "state": 1, "tag": "570" }
+{ "state": 1, "tag": "1b1", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "ae", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2930823", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2931655", "entity": "14", "state": 1, "tag": "1b1" }
+{ "time": "2932169", "entity": "29", "state": 17 }
+{ "time": "2933048", "entity": "15", "state": 17 }
+{ "time": "2933676", "entity": "5", "state": 17 }
+{ "state": 1, "tag": "343", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "2934343", "entity": "1", "state": 1, "tag": "ae" }
+{ "time": "2934772", "entity": "14", "state": 17 }
+{ "time": "2936066", "entity": "32", "state": 1, "tag": "343" }
+{ "time": "2936210", "entity": "26", "state": 17 }
+{ "time": "2939460", "entity": "52", "state": 1, "tag": "494" }
+{ "time": "2939597", "entity": "1", "state": 17 }
+{ "time": "2940588", "entity": "32", "state": 17 }
+{ "time": "2943613", "entity": "23", "state": 0, "tag": "497cdc5" }
+{ "time": "2946897", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "2954837", "entity": "30", "state": 17 }
+{ "state": 1, "tag": "565", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "time": "2959792", "entity": "15", "state": 1, "tag": "565" }
+{ "time": "2968711", "entity": "28", "state": 1, "tag": "2fc" }
+{ "time": "2971712", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "2971952", "entity": "13", "state": 1, "tag": "1a1" }
+{ "time": "2974959", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "2982979", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "2983981", "entity": "34", "state": 7, "tag": "ffffd062dbcb7d58" }
+{ "time": "2986129", "entity": "28", "state": 17 }
+{ "time": "2990466", "entity": "16", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "2994684", "entity": "34", "state": 17 }
+{ "time": "2998520", "entity": "16", "state": 17 }
+{ "time": "2999276", "entity": "18", "state": 0, "tag": "497cdd9" }
+{ "time": "3000587", "entity": "13", "state": 17 }
+{ "state": 1, "tag": "d7", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "time": "3004848", "entity": "16", "state": 0, "tag": "497d20a" }
+{ "time": "3004920", "entity": "2", "state": 1, "tag": "d7" }
+{ "time": "3005728", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "3018074", "entity": "23", "state": 17 }
+{ "time": "3019107", "entity": "2", "state": 17 }
+{ "time": "3023591", "entity": "15", "state": 7, "tag": "ffffd062dbd3caa0" }
+{ "time": "3023621", "entity": "10", "state": 17 }
+{ "time": "3026750", "entity": "14", "state": 17 }
+{ "time": "3029498", "entity": "38", "state": 0, "tag": "497cdd0" }
+{ "time": "3029791", "entity": "11", "state": 17 }
+{ "time": "3033399", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "3034832", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "time": "3042504", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "3050698", "entity": "15", "state": 17 }
+{ "time": "3059843", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "3067142", "entity": "14", "state": 17 }
+{ "time": "3087009", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "3091275", "entity": "36", "state": 17 }
+{ "time": "3100875", "entity": "26", "state": 0, "tag": "497d4e2" }
+{ "time": "3103179", "entity": "38", "state": 17 }
+{ "time": "3112559", "entity": "38", "state": 0, "tag": "497cdd0" }
+{ "time": "3130384", "entity": "49", "state": 17 }
+{ "time": "3130852", "entity": "36", "state": 0, "tag": "49a7f42" }
+{ "time": "3144079", "entity": "52", "state": 17 }
+{ "time": "3148229", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "3148920", "entity": "9", "state": 17 }
+{ "time": "3152479", "entity": "43", "state": 17 }
+{ "time": "3159520", "entity": "18", "state": 17 }
+{ "time": "3163635", "entity": "18", "state": 0, "tag": "497cdd9" }
+{ "time": "3164268", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "3165294", "entity": "43", "state": 0, "tag": "48d4ced" }
+{ "time": "3168555", "entity": "14", "state": 0, "tag": "4a0e388" }
+{ "time": "3171006", "entity": "11", "state": 17 }
+{ "state": 1, "tag": "3ecbe54", "thread": "mac`mac_srs_worker", "taskq": "<none>" }
+{ "time": "3183242", "entity": "52", "state": 17 }
+{ "time": "3183692", "entity": "11", "state": 0, "tag": "497cdd1" }
+{ "time": "3183796", "entity": "33", "state": 1, "tag": "3ecbe54" }
+{ "time": "3186062", "entity": "26", "state": 17 }
+{ "time": "3191125", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "3193820", "entity": "33", "state": 17 }
+{ "time": "3203137", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "3207620", "entity": "14", "state": 17 }
+{ "time": "3208377", "entity": "11", "state": 17 }
+{ "time": "3209779", "entity": "9", "state": 17 }
+{ "time": "3228662", "entity": "15", "state": 17 }
+{ "time": "3233904", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "3239573", "entity": "1", "state": 0, "tag": "48d4e10" }
+{ "time": "3242310", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "3247045", "entity": "4", "state": 15 }
+{ "time": "3249062", "entity": "4", "state": 17 }
+{ "time": "3250489", "entity": "4", "state": 3, "tag": "2" }
+{ "time": "3254343", "entity": "52", "state": 17 }
+{ "time": "3254565", "entity": "4", "state": 17 }
+{ "time": "3257853", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "3260479", "entity": "22", "state": 0, "tag": "48d4e18" }
+{ "time": "3261954", "entity": "19", "state": 17 }
+{ "time": "3266829", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "3267804", "entity": "22", "state": 17 }
+{ "time": "3270503", "entity": "4", "state": 16 }
+{ "time": "3271940", "entity": "9", "state": 16 }
+{ "time": "3272354", "entity": "15", "state": 16 }
+{ "time": "3272791", "entity": "18", "state": 16 }
+{ "time": "3272865", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "3273096", "entity": "52", "state": 16 }
+{ "time": "3273281", "entity": "49", "state": 16 }
+{ "time": "3274285", "entity": "17", "state": 16 }
+{ "time": "3274728", "entity": "38", "state": 16 }
+{ "time": "3277012", "entity": "9", "state": 0, "tag": "4980fc2" }
+{ "time": "3277370", "entity": "52", "state": 0, "tag": "49a7f45" }
+{ "time": "3277741", "entity": "49", "state": 0, "tag": "497cdd3" }
+{ "time": "3278500", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "3278837", "entity": "18", "state": 0, "tag": "497cdd9" }
+{ "time": "3282801", "entity": "15", "state": 17 }
+{ "time": "3283385", "entity": "17", "state": 0, "tag": "49a7f2e" }
+{ "time": "3284342", "entity": "38", "state": 0, "tag": "497cdd0" }
+{ "time": "3296061", "entity": "9", "state": 17 }
+{ "time": "3297797", "entity": "4", "state": 17 }
+{ "time": "3306163", "entity": "18", "state": 17 }
+{ "time": "3309408", "entity": "6", "state": 0, "tag": "497cdd9" }
+{ "time": "3316172", "entity": "4", "state": 0, "tag": "49a7f49" }
+{ "time": "3331918", "entity": "17", "state": 17 }
+{ "time": "3339615", "entity": "17", "state": 0, "tag": "49a7f2e" }
+{ "time": "3340029", "entity": "15", "state": 0, "tag": "49a7f32" }
+{ "time": "3343966", "entity": "38", "state": 17 }
+{ "time": "3347924", "entity": "49", "state": 17 }
+{ "time": "3352143", "entity": "38", "state": 15 }
+{ "time": "3352954", "entity": "4", "state": 17 }
+{ "state": 2, "tag": "3", "driver": "softint", "instance": 0 }
+{ "state": 0, "tag": "4a0e384", "pid": "50378", "tid": "1", "execname": "dtrace", "psargs": "/usr/sbin/dtrace -Cs ./postgres-statemap-zfs.d" }
+{ "state": 0, "tag": "49a7f42", "pid": "565192", "tid": "66", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f49", "pid": "565192", "tid": "74", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "497cdd3", "pid": "565192", "tid": "19", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f45", "pid": "565192", "tid": "70", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f32", "pid": "565192", "tid": "51", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f46", "pid": "565192", "tid": "71", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "497cdd0", "pid": "565192", "tid": "16", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "4a0e388", "pid": "50380", "tid": "1", "execname": "pg_xlogdump", "psargs": "/opt/postgresql/current/bin/pg_xlogdump -f /manatee/pg/data/pg_xlog/00000001000" }
+{ "state": 0, "tag": "49a7f3e", "pid": "565192", "tid": "63", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "49a7f2e", "pid": "565192", "tid": "47", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 7, "tag": "ffffd062dbcb7d58", "driver": "ixgbe", "instance": 2 }
+{ "state": 0, "tag": "497cdd1", "pid": "565192", "tid": "17", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "48d4b6d", "pid": "5447", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "state": 0, "tag": "497cdd4", "pid": "565192", "tid": "20", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "497cd9f", "pid": "565192", "tid": "1", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "4980fc2", "pid": "565192", "tid": "27", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "497cdd9", "pid": "565192", "tid": "24", "execname": "pg_prefaulter", "psargs": "/opt/smartdc/manatee/bin/pg_prefaulter run --config=/opt/smartdc/manatee/etc/pg" }
+{ "state": 0, "tag": "48d4b75", "pid": "5447", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "state": 10, "tag": "b", "driver": "softint", "instance": 0 }
+{ "state": 0, "tag": "48d4ade", "pid": "5336", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "state": 0, "tag": "48d4ae8", "pid": "5336", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2021 -k 3021" }
+{ "state": 0, "tag": "4a0e383", "pid": "50377", "tid": "1", "execname": "dtrace", "psargs": "/usr/sbin/dtrace -Cs ./cpu-statemap-tagged.d" }
+{ "state": 0, "tag": "48d4ced", "pid": "5737", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2023 -k 3023" }
+{ "state": 0, "tag": "48d4d00", "pid": "5737", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2023 -k 3023" }
+{ "state": 0, "tag": "497d20a", "pid": "566150", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 0, "tag": "497d212", "pid": "566158", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 0, "tag": "48d4e10", "pid": "5958", "tid": "1", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2024 -k 3024" }
+{ "state": 0, "tag": "497d4e2", "pid": "566865", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 0, "tag": "48d4e18", "pid": "5958", "tid": "2", "execname": "node", "psargs": "node --abort-on-uncaught-exception main.js -f etc/config.json -p 2024 -k 3024" }
+{ "state": 0, "tag": "497e0d4", "pid": "569380", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 1, "tag": "508", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "506", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "56b", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "50c", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "572", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "589", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "511", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "563", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "588", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "50f", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "591", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "568", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "505", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "494", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "50b", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "50a", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "3a3", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "586", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "332", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "1a1", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "431", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "149", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "2fc", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "53d", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "159", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "3c4", "thread": "zfs`dbuf_evict_thread", "taskq": "<none>" }
+{ "state": 1, "tag": "454", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "532", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "401", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "441", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "201", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "109", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "4f0", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 7, "tag": "ffffd062dbd3caa0", "driver": "ixgbe", "instance": 0 }
+{ "state": 1, "tag": "56f", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "474", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "231", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "3b3", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "55c", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "421", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "547", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "139", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "58a", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "48c0687", "thread": "mac`mac_srs_worker", "taskq": "<none>" }
+{ "state": 0, "tag": "497cdc5", "pid": "565220", "tid": "1", "execname": "postgres", "psargs": "/opt/postgresql/9.6.3/bin/postgres -D /manatee/pg/data" }
+{ "state": 1, "tag": "119", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "2", "driver": "softint", "instance": 0 }
+{ "state": 1, "tag": "353", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "592", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "4e9", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "245", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "570", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "1b1", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "ae", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "343", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "565", "thread": "genunix`taskq_thread", "taskq": "callout_taskq" }
+{ "state": 1, "tag": "d7", "thread": "ip`squeue_worker", "taskq": "<none>" }
+{ "state": 1, "tag": "3ecbe54", "thread": "mac`mac_srs_worker", "taskq": "<none>" }

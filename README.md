@@ -225,15 +225,15 @@ result in less coalescence.
 may be expressed in floating point with an optional suffix (e.g.,
 `-d 491.2ms`).
 
-- `-h` (`--stateHeight`): The height (in pixels) of each state in the
+- `-h` (`--state-height`): The height (in pixels) of each state in the
 statemap.
 
-- `-i` (`--ignoreTags`): Ignore tags in the input, acting as if each state
+- `-i` (`--ignore-tags`): Ignore tags in the input, acting as if each state
 is untagged. (This will result in shorter run-time and a smaller resulting
 SVG.)
 
-- `-s` (`--stateHeight`): The height (in pixels) of each state in the
-statemap.
+- `-s` (`--sortby`): The state by which to sort (default is to sort by
+entity).
 
 ## Interaction
 
