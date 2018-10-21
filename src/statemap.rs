@@ -641,7 +641,7 @@ impl StatemapEntity {
         } else {
             x = globals.pixelWidth as f64;
         }
-            
+
         println!(r##"<rect x="0" y="{}" width="{}"
             height="{}" style="fill:{}" />"##, y, x, config.stripHeight,
             config.background);
@@ -649,31 +649,27 @@ impl StatemapEntity {
         println!(r##"<g id="{}{}"><title>{} {}</title>"##,
             globals.entityPrefix, self.name, globals.entityKind, self.name);
 
-        for i in 0..map.len() {
-            let rect = self.rects.get(&map[i]).unwrap().borrow();
-            let mut state = None;
-            let mut blended = false;
-
-            x = ((map[i] - globals.begin) as f64 /
-                globals.timeWidth as f64) * globals.pixelWidth as f64;
-
-            for j in 0..rect.states.len() {
-                if rect.states[j] != 0 {
-                    match state {
-                        None => { state = Some(j) },
-                        Some(_s) => {
-                            blended = true;
-                            break;
-                        }
-                    }
-                }
+        for rect_start in map {
+            let rect = self.rects[&rect_start].borrow();
+            if rect.duration == 0 {
+                // discard this rectangle since it has 0 width
+                continue;
             }
 
-            if !blended {
-                assert!(state.is_some());
+            x = ((rect_start - globals.begin) as f64 /
+                globals.timeWidth as f64) * globals.pixelWidth as f64;
 
-                let mut datum = format!("{{ t: {}, s: {}", rect.start,
-                    state.unwrap());
+            let states_held_in_rect: Vec<_> = rect.states
+                .iter()
+                .enumerate()
+                .filter(|(_, &t)| t > 0)
+                .collect();
+
+            assert!(states_held_in_rect.len() > 0);
+
+            if states_held_in_rect.len() == 1 {
+                let state = states_held_in_rect[0].0;
+                let mut datum = format!("{{ t: {}, s: {}", rect.start, state);
 
                 output_tags(&rect, &mut datum);
                 datum.push_str("}");
@@ -683,30 +679,27 @@ impl StatemapEntity {
                     r##"height="{}" onclick="mapclick(evt, {})" "##,
                     r##"style="fill:{}" />"##),
                     x, y, rect_width(&rect), config.stripHeight,
-                    data.len() - 1, colors[state.unwrap()]);
+                    data.len() - 1, colors[state]);
 
                 continue;
             }
 
-            let max = rect.states.iter().enumerate()
-                .max_by(|&(_, lhs), &(_, rhs)| lhs.cmp(rhs)).unwrap().0;
+            let max = states_held_in_rect.iter()
+                .max_by_key(|&(_, time_in_state)| time_in_state)
+                .unwrap().0;
 
             let mut color = colors[max];
             let mut datum = format!("{{ t: {}, s: {{ ", rect.start);
             let mut comma = "";
-            
-            for j in 0..rect.states.len() {
-                if rect.states[j] == 0 {
-                    continue;
-                }
 
-                let ratio = rect.states[j] as f64 / rect.duration as f64;
+            for (state_id, time_in_state) in states_held_in_rect {
+                let ratio = *time_in_state as f64 / rect.duration as f64;
 
-                datum.push_str(&format!("{}'{}': {:.3}", comma, j, ratio));
+                datum.push_str(&format!("{}'{}': {:.3}", comma, state_id, ratio));
                 comma = ", ";
 
-                if j != max {
-                    color = color.mix_nonlinear(&colors[j], ratio as f32);
+                if state_id != max {
+                    color = color.mix_nonlinear(&colors[state_id], ratio as f32);
                 }
             }
 
