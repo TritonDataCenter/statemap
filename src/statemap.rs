@@ -1526,11 +1526,13 @@ impl Statemap {
 
                 let datum = data.get(entity).unwrap();
 
-                for i in 0..datum.len() - 1 {
-                    println!("{},", datum[i]);
+                for d in datum.iter() {
+                    println!("{},", d);
                 }
 
-                println!("{}", datum[datum.len() - 1]);
+                if let Some(last_d) = datum.last() {
+                    println!("{}", last_d);
+                }
                 println!("]");
                 comma = ",";
             }
