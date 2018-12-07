@@ -38,12 +38,12 @@ fn usage(opts: Options) {
     ::std::process::exit(0);
 }
 
-fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
-    fn parse_offset_val(val: &str) -> Option<u64> {
-        let mut mult: u64 = 1;
+fn parse_offset(matches: &getopts::Matches, opt: &str) -> i64 {
+    fn parse_offset_val(val: &str) -> Option<i64> {
+        let mut mult: i64 = 1;
         let mut num = val;
 
-        let suffixes: &[(&'static str, u64)] = &[
+        let suffixes: &[(&'static str, i64)] = &[
             ("ns", 1), ("us", 1_000), ("ms", 1_000_000),
             ("s", 1_000_000_000), ("sec", 1_000_000_000)
         ];
@@ -61,7 +61,7 @@ fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
          * on parsing it as floating point if that fails (and being sure
          * to not allow some joker to specify "NaNms").
          */
-        match num.parse::<u64>() {
+        match num.parse::<i64>() {
             Err(_err) => {
                 match num.parse::<f64>() {
                     Err(_err) => None,
@@ -69,7 +69,7 @@ fn parse_offset(matches: &getopts::Matches, opt: &str) -> u64 {
                         if val.is_nan() {
                             None
                         } else {
-                            Some((val * mult as f64) as u64)
+                            Some((val * mult as f64) as i64)
                         }
                     }
                 }
@@ -202,8 +202,8 @@ fn main() {
         usage(parser);
     }
 
-    let mut begin: u64 = 0;
-    let mut end: u64 = 0;
+    let mut begin: i64 = 0;
+    let mut end: i64 = 0;
 
     let has_duration = matches.opt_present("duration");
     let has_begin = matches.opt_present("begin");
@@ -253,6 +253,7 @@ fn main() {
         begin: begin,
         end: end,
         notags: matches.opt_present("ignore-tags"),
+        abstime: false,
         .. Default::default()
     };
 
@@ -264,7 +265,6 @@ fn main() {
         _ => {}
     }
 
-    let mut statemap = Statemap::new(&config);
     let mut svgconf: StatemapSVGConfig = Default::default();
 
     svgconf.sortby = matches.opt_str("sortby");
@@ -276,16 +276,41 @@ fn main() {
         }
     }
 
-    match statemap.ingest(&matches.free[0]) {
-        Err(f) => { fatal!("could not ingest {}: {}", &matches.free[0], f); }
-        Ok(k) => { k }
+    let mut statemaps: Vec<Statemap> = vec![];
+
+    for i in 0..matches.free.len() {
+        let mut statemap = Statemap::new(&config);
+        let filename = &matches.free[i];
+
+        match statemap.ingest(filename) {
+            Err(f) => { fatal!("could not ingest {}: {}", filename, f); }
+            Ok(k) => { k }
+        }
+
+        if !config.abstime {
+            /*
+             * If our time configuration is not absolute, we just processed
+             * our first statemap; change our time configuration to now be
+             * absolute to key the time for every subsequent statemap based
+             * on this first statemap.
+             */
+            assert!(i == 0);
+            config.abstime = true;
+            let timebounds = statemap.timebounds();
+            config.begin = timebounds.0 as i64;
+            config.end = timebounds.1 as i64;
+        }
+
+        statemaps.push(statemap);
     }
 
     if matches.opt_present("dry-run") {
         return;
     }
 
-    match statemap.output_svg(&svgconf) {
+    let svg = StatemapSVG::new(&svgconf);
+
+    match svg.output(&statemaps) {
         Err(f) => { fatal!("{}", f); }
         Ok(k) => { k }
     }

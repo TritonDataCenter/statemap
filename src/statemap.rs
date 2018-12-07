@@ -65,10 +65,11 @@ struct StatemapInputTag {
 
 #[derive(Copy,Clone,Debug)]
 pub struct Config {
-    pub maxrect: u64,
-    pub begin: u64,
-    pub end: u64,
-    pub notags: bool,
+    pub maxrect: u64,                       // maximum number of rectangles
+    pub abstime: bool,                      // time is absolute, not relative
+    pub begin: i64,                         // absolute/relative time to begin
+    pub end: i64,                           // absolute/relative time to end
+    pub notags: bool,                       // do not include tags
 }
 
 /*
@@ -108,7 +109,7 @@ struct StatemapRectWeight {
     entity: usize,                          // entity for this rect
 }
 
-#[derive(Default,Clone,Debug,Serialize)]
+#[derive(Default,Clone,PartialEq,Eq,Debug,Serialize)]
 struct StatemapState {
     name: String,                           // name of this state
     value: usize,                           // value for this state
@@ -138,6 +139,8 @@ pub struct Statemap {
     byid: Vec<String>,                      // entities by ID
     byweight: BTreeSet<StatemapRectWeight>, // rectangles by weight
     tags: HashMap<(u32, String), (Value, usize)>, // tags, if any
+    begin: u64,                             // begin time, as ns since epoch
+    end: u64,                               // end time, as ns since epoch
 }
 
 #[derive(Debug)]
@@ -148,8 +151,8 @@ pub struct StatemapError {
 #[derive(Serialize)]
 #[allow(non_snake_case)]
 struct StatemapSVGGlobals<'a> {
-    begin: u64,
-    end: u64,
+    begin: i64,
+    end: i64,
     entityPrefix: String,
     pixelHeight: u32,
     pixelWidth: u32,
@@ -157,9 +160,22 @@ struct StatemapSVGGlobals<'a> {
     timeWidth: u64,
     lmargin: u32,
     tmargin: u32,
+    smargin: u32,
     states: &'a Vec<StatemapState>,
     start: &'a Vec<u64>,
     entityKind: &'a str,
+}
+
+#[derive(Serialize)]
+#[allow(non_snake_case)]
+struct StatemapSVGLocals<'a> {
+    offset: i64,
+    states: &'a Vec<StatemapState>,
+    entityKind: &'a str,
+}
+
+pub struct StatemapSVG<'a> {
+    config: &'a StatemapSVGConfig,
 }
 
 use std::fs::File;
@@ -167,13 +183,12 @@ use std::str;
 use std::error::Error;
 use std::fmt;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use std::cell::RefCell;
 use std::cmp;
-
-#[cfg(test)]
-use std::collections::HashSet;
+use std::path::Path;
 
 use self::memmap::MmapOptions;
 use self::palette::{Srgb, Color, Mix};
@@ -186,6 +201,7 @@ impl Default for Config {
             begin: 0,
             end: 0,
             notags: false,
+            abstime: false,
         }
     }
 }
@@ -586,8 +602,8 @@ impl StatemapEntity {
         updates
     }
 
-    fn output_svg(&self, config: &StatemapSVGConfig,
-        globals: &StatemapSVGGlobals,
+    fn output_svg(&self, id: usize, begin: i64, config: &StatemapSVGConfig,
+        globals: &StatemapSVGGlobals, locals: &StatemapSVGLocals,
         colors: &Vec<StatemapColor>, y: u32) -> Vec<String>
     {
         let rect_width = |rect: &StatemapRect| -> f64 {
@@ -628,33 +644,33 @@ impl StatemapEntity {
             }
         };
 
-        let mut x: f64;
-        let mut map: Vec<u64>;
+        let background = |x: f64, width: f64| {
+            println!(r##"<rect x="{}" y="{}" width="{}"
+                height="{}" style="fill:{}" />"##, x, y, width,
+                config.stripHeight, config.background);
+        };
+
+        let mut x: f64 = 0.0;
+        let mut map: Vec<i64>;
         let mut data: Vec<String> = vec![];
 
-        map = self.rects.values().map(|r| r.borrow().start).collect();
+        map = self.rects.values().map(|r| r.borrow().start as i64).collect();
         map.sort();
 
-        if map.len() > 0 {
-            x = ((map[0] - globals.begin) as f64 /
-                globals.timeWidth as f64) * globals.pixelWidth as f64;
-        } else {
-            x = globals.pixelWidth as f64;
+        if map.len() >= 1 && map[0] > begin {
+            background(0.0, ((map[0] - begin) as f64 /
+                globals.timeWidth as f64) * globals.pixelWidth as f64);
         }
-            
-        println!(r##"<rect x="0" y="{}" width="{}"
-            height="{}" style="fill:{}" />"##, y, x, config.stripHeight,
-            config.background);
 
-        println!(r##"<g id="{}{}"><title>{} {}</title>"##,
-            globals.entityPrefix, self.name, globals.entityKind, self.name);
+        println!(r##"<g id="{}{}-{}"><title>{} {}</title>"##,
+            globals.entityPrefix, id, self.name, locals.entityKind, self.name);
 
         for i in 0..map.len() {
-            let rect = self.rects.get(&map[i]).unwrap().borrow();
+            let rect = self.rects.get(&(map[i] as u64)).unwrap().borrow();
             let mut state = None;
             let mut blended = false;
 
-            x = ((map[i] - globals.begin) as f64 /
+            x = ((map[i] - begin) as f64 /
                 globals.timeWidth as f64) * globals.pixelWidth as f64;
 
             for j in 0..rect.states.len() {
@@ -721,8 +737,15 @@ impl StatemapEntity {
                 r##"style="fill:{}" />"##), x, y, rect_width(&rect),
                 config.stripHeight, data.len() - 1, color);
         }
-        
+
         println!("</g>");
+
+        /*
+         * Finally, add a background rectangle that covers whatever remains
+         * of our width.
+         */
+        background(x, globals.pixelWidth as f64 - x);
+
         data
     }
 
@@ -819,6 +842,79 @@ enum Ingest {
     EndOfFile,
 }
 
+fn try_parse<'de, T>(content: &mut &'de str)
+    -> Result<Option<T>, serde_json::Error>
+where
+    T: serde::Deserialize<'de>
+{
+    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
+    match de.next() {
+        Some(Ok(value)) => {
+            *content = &content[de.byte_offset()..];
+            Ok(Some(value))
+        }
+        Some(Err(err)) => Err(err),
+        None => Ok(None),
+    }
+}
+
+fn try_parse_raw<'de, T>(content: &mut &'de str)
+    -> Result<Option<(T, serde_json::Value)>, serde_json::Error>
+where
+    T: serde::Deserialize<'de>
+{
+    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
+    let offset = de.byte_offset();
+
+    match de.next() {
+        Some(Ok(value)) => {
+            let v: serde_json::Value =
+                serde_json::from_str(&content[offset..de.byte_offset()])?;
+
+            *content = &content[de.byte_offset()..];
+
+            Ok(Some((value, v)))
+        }
+        Some(Err(err)) => Err(err),
+        None => Ok(None),
+    }
+}
+
+fn line_number(mmap: &[u8], byte_offset: usize) -> usize {
+    let mut nls = mmap[..byte_offset].iter().filter(|&&b| b == b'\n').count();
+
+    /*
+     * We report the line number of the first non-whitespace character after
+     * byte_offset.
+     */
+    for b in mmap[byte_offset..].iter() {
+        if *b == b'\n' {
+            nls += 1;
+        }
+
+        if !((*b as char).is_whitespace()) {
+            break;
+        }
+    }
+
+    nls + 1
+}
+
+/*
+ * The time value is written in the input as a JSON string containing a number.
+ * Deserialize just the number here without allocating memory for a String.
+ */
+fn datum_time_from_string<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: &str = serde::Deserialize::deserialize(deserializer)?;
+    match u64::from_str(s) {
+        Ok(time) => Ok(time),
+        Err(_) => Err(serde::de::Error::custom("illegal time value")),
+    }
+}
+
 impl Statemap {
     pub fn new(config: &Config) -> Self {
         Statemap {
@@ -831,6 +927,8 @@ impl Statemap {
             byweight: BTreeSet::new(),
             metadata: None,
             tags: HashMap::new(),
+            begin: 0,
+            end: 0,
         }
     }
 
@@ -1154,19 +1252,29 @@ impl Statemap {
     }
 
     fn ingest_end(&mut self) {
-        let mut end = self.config.end;
+        assert!(!self.config.abstime);
 
-        if end == 0 {
-            /*
-             * If we weren't given an ending time, take a lap through all
-             * of our entities to find the one with the latest time.
-             */
-            end = self.entities.values().fold(0, |latest, e| {
-                match e.start {
-                    Some(start) => cmp::max(latest, start),
-                    None => latest
-                }
-            });
+        if self.config.end < 0 {
+            return;
+        }
+
+        /*
+         * Take a lap through all of our entities to find the one with the
+         * latest time.
+         */
+        let mut end = self.entities.values().fold(0, |latest, e| {
+            match e.start {
+                Some(start) => cmp::max(latest, start),
+                None => latest
+            }
+        });
+
+        /*
+         * If we've been given an ending time and it's less than our last
+         * rectangle, we'll use that.
+         */
+        if self.config.end != 0 && self.config.end < end as i64 {
+            end = self.config.end as u64;
         }
 
         let nstates = self.states.len() as u32;
@@ -1191,6 +1299,11 @@ impl Statemap {
                 _ => {}
             }
         }
+
+        let metadata = self.metadata.as_ref().unwrap();
+        let start = (metadata.start[0] * 1_000_000_000) + metadata.start[1];
+        self.begin = (self.config.begin + start as i64) as u64;
+        self.end = cmp::max(end, self.config.end as u64) + start;
     }
 
     /*
@@ -1209,7 +1322,7 @@ impl Statemap {
                  * If the time of this datum is after our specified end time,
                  * we have nothing further to do to process it.
                  */
-                if self.config.end > 0 && time > self.config.end {
+                if self.config.end != 0 && time as i64 > self.config.end {
                     return Ok(Ingest::Success);
                 }
 
@@ -1244,13 +1357,13 @@ impl Statemap {
                                 break;
                             }
 
-                            if time > begin {
+                            if (time as i64) > begin {
                                 /*
                                  * We can now create a new rectangle for this
                                  * entity's past state.
                                  */
-                                if start < begin {
-                                    entity.start = Some(begin);
+                                if begin > 0 && start < (begin as u64) {
+                                    entity.start = Some(begin as u64);
                                 }
 
                                 let rval = entity.newrect(time, nstates);
@@ -1376,6 +1489,20 @@ impl Statemap {
         self.ingest_metadata(&mut contents)?;
 
         /*
+         * If our time was presented as absolute time, we will now convert it
+         * to be relative to our (now known) start time.
+         */
+        if self.config.abstime {
+            let metadata = self.metadata.as_ref().unwrap();
+            let start = (metadata.start[0] * 1_000_000_000 +
+                metadata.start[1]) as i64;
+
+            self.config.begin -= start;
+            self.config.end -= start;
+            self.config.abstime = false;
+        }
+
+        /*
          * Now rip through our data pulling out concatenated JSON payloads.
          */
         loop {
@@ -1402,25 +1529,17 @@ impl Statemap {
         
         self.ingest_end();
 
-        eprintln!("{} records processed, {} rectangles",
+        eprintln!("{}: {} records processed, {} rectangles",
+            Path::new(filename).file_name().unwrap().to_string_lossy(),
             nrecs, self.byweight.len());
         Ok(())
     }
 
-    fn output_defs(&self, config: &StatemapSVGConfig,
-        globals: &StatemapSVGGlobals)
-    {
-        println!("<defs>");
+    pub fn timebounds(&self) -> (u64, u64) {
+        (self.begin, self.end)
+    }
 
-        println!("<script type=\"application/ecmascript\"><![CDATA[");
-
-        println!("var globals = {{");
-        let str = serde_json::to_string_pretty(&config).unwrap();
-        println!("{},", &str[2..str.len() - 2]);
-
-        let str = serde_json::to_string_pretty(&globals).unwrap();
-        println!("{},", &str[2..str.len() - 2]);
-
+    fn output_defs(&self) {
         /*
          * Provide an "entities" member that has the descriptions for each
          * entity, if they have one.  Yes, this is a little goofy -- it
@@ -1429,7 +1548,7 @@ impl Statemap {
          * the sake of compatibility with the legacy implementation, however
          * dubious..
          */
-        println!("  entities: {{");
+        println!("entities: {{");
 
         let mut comma = "";
 
@@ -1445,8 +1564,7 @@ impl Statemap {
             comma = ",";
         }
 
-        println!("  }}");
-        println!("}};");
+        println!("}}");
 
         if self.tags.len() > 0 {
             /*
@@ -1461,7 +1579,7 @@ impl Statemap {
 
             tags.sort_unstable();
 
-            println!("globals.tags = [");
+            println!(", tags: [");
 
             for i in 0..tags.len() {
                 let (value, id) =
@@ -1472,12 +1590,133 @@ impl Statemap {
                     if i < tags.len() - 1 { "," } else { "" });
             }
 
-            println!("];");
-            println!("globals.notags = false;");
-        } else {
-            println!("globals.tags = [];");
-            println!("globals.notags = true;");
+            println!("]");
         }
+    }
+
+    fn output_svg(&self, id: usize, config: &StatemapSVGConfig,
+        globals: &StatemapSVGGlobals,
+        colors: &Vec<StatemapColor>) -> Result<(), Box<Error>>
+    {
+        let output_data = |data: &HashMap<&String, Vec<String>>| {
+            println!("data: {{ ");
+            let mut comma = "";
+
+            for entity in data.keys() {
+                println!("{}{}: [", comma, entity);
+
+                let datum = data.get(entity).unwrap();
+
+                if datum.len() > 0 {
+                    for i in 0..datum.len() - 1 {
+                        println!("{},", datum[i]);
+                    }
+
+                    println!("{}", datum[datum.len() - 1]);
+                }
+
+                println!("]");
+                comma = ",";
+            }
+
+            println!(r##"}},"##);
+        };
+
+        let metadata = match self.metadata {
+            Some(ref metadata) => { metadata }
+            _ => { return self.err("metadata not found in data stream"); }
+        };
+
+        /*
+         * Sort our entities, by whatever criteria has been specified.
+         */
+        let sort = match config.sortby {
+            None => None,
+            Some(ref sortby) => {
+                if metadata.states.contains_key(sortby) {
+                    Some(metadata.states.get(sortby).unwrap().value)
+                } else {
+                    if sortby == "entity" {
+                        /*
+                         * A state of "entity" denotes that we should sort
+                         * by entity name.
+                         */
+                        None
+                    } else {
+                        return self.err(&format!(concat!("cannot sort by ",
+                            "state \"{}\": no such state"), sortby));
+                    }
+                }
+            }
+        };
+
+        let entities = self.sort(sort);
+
+        println!(r##"<g id="statemap-{}" transform="matrix(1 0 0 1 0 0)">"##,
+            id);
+
+        let mut y = 0;
+        let mut data = HashMap::new();
+
+        let locals = StatemapSVGLocals {
+            offset: self.config.begin - globals.begin,
+            states: &self.states,
+            entityKind: match metadata.entityKind {
+                Some(ref kind) => { kind }
+                None => { "Entity" }
+            },
+        };
+
+        for e in entities {
+            let entity = self.entities.get(self.byid.get(e).unwrap()).unwrap();
+
+            println!("{}", e);
+            data.insert(&entity.name, entity.output_svg(id,
+                self.config.begin, config, globals, &locals, &colors, y));
+            y += config.stripHeight;
+        }
+
+        println!("</g>");
+
+        /*
+         * Finally, output our element in the global statemaps array.
+         */
+        println!("<defs>");
+        println!(r##"<script type="application/ecmascript"><![CDATA["##);
+
+        let str = serde_json::to_string_pretty(&locals).unwrap();
+
+        println!("g_statemaps[{}] = {{\n{},", id, &str[2..str.len() - 2]);
+
+        output_data(&data);
+        self.output_defs();
+
+        println!(r##"}} ]]></script></defs>"##);
+
+        Ok(())
+    }
+}
+
+impl<'a> StatemapSVG<'a> {
+    pub fn new(config: &'a StatemapSVGConfig) -> Self {
+        StatemapSVG {
+            config: config
+        }
+    }
+
+    fn output_defs(&self, globals: &StatemapSVGGlobals)
+    {
+        println!("<defs>");
+
+        println!("<script type=\"application/ecmascript\"><![CDATA[");
+
+        println!("var globals = {{");
+        let str = serde_json::to_string_pretty(&self.config).unwrap();
+        println!("{},", &str[2..str.len() - 2]);
+
+        let str = serde_json::to_string_pretty(&globals).unwrap();
+        println!("{},", &str[2..str.len() - 2]);
+        println!("}}");
 
         /*
          * Now drop in our in-SVG code.
@@ -1502,7 +1741,65 @@ impl Statemap {
         println!("</defs>");
     }
 
-    pub fn output_svg(&self, config: &StatemapSVGConfig) ->
+    fn title(&self, statemaps: &Vec<Statemap>) -> String
+    {
+        /*
+         * A little helper routine to generate an Oxford comma-separated
+         * list.
+         */
+        let oxford = |v: &Vec<String>| {
+            let map: HashSet<_> = v.iter().collect();
+
+            if map.len() == 1 {
+                v[0].clone()
+            } else if v.len() == 2 {
+                v.join(" and ")
+            } else {
+                (&v[0..v.len() - 1]).join(", ") + ", and " + &v[v.len() - 1]
+            }
+        };
+
+        /*
+         * If we have "statemap" anywhere in the title of the first statemap,
+         * we assume it's a legacy title and just use that.
+         */
+        let metadata = statemaps[0].metadata.as_ref().unwrap();
+
+        if metadata.title.find("tatemap").is_some() {
+            return metadata.title.clone();
+        }
+
+        /*
+         * Gather our titles.
+         */
+        let titles = statemaps.iter()
+            .filter_map(|s| s.metadata.as_ref())
+            .map(|m| m.title.to_string())
+            .collect::<Vec<String>>();
+
+        let mut title = vec!["Statemap of".to_string(),
+            oxford(&titles), "activity".to_string()];
+
+        let hosts = statemaps.iter()
+            .filter_map(|s| s.metadata.as_ref())
+            .filter_map(|m| m.host.as_ref())
+            .map(|r| r.to_string())
+            .collect::<Vec<String>>();
+
+        if hosts.len() > 0 {
+            title.push("on".to_string());
+
+            if hosts.iter().collect::<HashSet<_>>().len() > 5 {
+                title.push(format!("{} hosts", hosts.len()));
+            } else {
+                title.push(oxford(&hosts));
+            }
+        }
+
+        title.join(" ")
+    }
+
+    pub fn output(&self, statemaps: &Vec<Statemap>) ->
         Result<(), Box<Error>>
     {
         struct Props {
@@ -1514,29 +1811,7 @@ impl Statemap {
             spacing: u32
         };
 
-        let output_data = |data: &HashMap<&String, Vec<String>>| {
-            println!("<defs>");
-            println!(r##"<script type="application/ecmascript"><![CDATA["##);
-
-            println!("g_data = {{ ");
-            let mut comma = "";
-
-            for entity in data.keys() {
-                println!("{}{}: [", comma, entity);
-
-                let datum = data.get(entity).unwrap();
-
-                for i in 0..datum.len() - 1 {
-                    println!("{},", datum[i]);
-                }
-
-                println!("{}", datum[datum.len() - 1]);
-                println!("]");
-                comma = ",";
-            }
-
-            println!(r##"}} ]]></script></defs>"##);
-        };
+        let base = &statemaps[0];
 
         let output_controls = |props: &Props| {
             let width = props.width / 4;
@@ -1565,72 +1840,108 @@ impl Statemap {
             println!("</svg>");
         };
 
-        let output_legend = |props: &Props, colors: &Vec<StatemapColor>| {
+        let output_legend = |statemap: &Statemap, id: usize,
+            props: &mut Props, colors: &Vec<StatemapColor>|
+        {
             let x = props.x;
             let mut y = props.y;
             let height = props.lheight;
             let width = props.width;
 
-            for state in 0..self.states.len() {
-                println!(r##"<rect x="{}" y="{}" width="{}" height="{}"
-                    id="statemap-legend-{}" onclick="legendclick(evt, {})"
-                    class="statemap-legend" style="fill:{}" />"##,
-                    x, y, width, height, state, state, colors[state]);
+            for state in 0..statemap.states.len() {
+                println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
+                    r##"height="{}" id="statemap-legend-{}-{}" "##,
+                    r##"onclick="legendclick(evt, {}, {})" "##,
+                    r##"class="statemap-legend" style="fill:{}" />"##),
+                    x, y, width, height, id, state, id, state, colors[state]);
                 y += height + props.spacing;
 
                 println!(concat!(r##"<text x="{}" y="{}" "##,
                     r##"class="statemap-legendlabel sansserif">{}</text>"##),
-                    x + (width / 2), y, self.states[state].name);
+                    x + (width / 2), y, statemap.states[state].name);
                 y += props.spacing;
             }
+
+            props.y = y;
         };
 
         let output_tagbox = || {
-            if !self.config.notags {
+            if !base.config.notags {
                 println!(r##"<g id="statemap-tagbox"></g>"##);
                 println!(r##"<g id="statemap-tagbox-select"></g>"##);
             }
         };
 
-        let metadata = match self.metadata {
+        let metadata = match base.metadata {
             Some(ref metadata) => { metadata }
-            _ => { return self.err("metadata not found in data stream"); }
+            _ => { return base.err("metadata not found in data stream"); }
         };
 
         #[allow(non_snake_case)]
-        let timeWidth = self.entities.values().fold(self.config.end,
+        let timeWidth = base.entities.values().fold(base.config.end,
             |latest, e| {
                 match e.start {
-                    Some(start) => cmp::max(latest, start),
+                    Some(start) => cmp::max(latest, start as i64),
                     None => latest
                }
-            }) - self.config.begin;
+            }) - base.config.begin;
 
-        let lmargin = config.legendWidth;
+        assert!(timeWidth >= 0);
+
+        let lmargin = self.config.legendWidth;
         let tmargin = 60;
-        let rmargin = config.tagWidth;
+        let rmargin = self.config.tagWidth;
+        let smargin = self.config.stripHeight;
+        let height: u32;
 
-        let height = (self.entities.len() as u32 *
-            config.stripHeight) + tmargin;
-        let width = config.stripWidth + lmargin + rmargin;
+        let stacked = true;
+
+        if stacked || statemaps.len() == 1 {
+            let nentities = statemaps.iter().fold(0,
+                |total, statemap| { total + statemap.entities.len() });
+
+            height = nentities as u32 * self.config.stripHeight +
+                tmargin + ((statemaps.len() as u32) - 1) * smargin;
+        } else {
+            panic!("tabbed statemaps not yet supported");
+        }
+
+        let width = self.config.stripWidth + lmargin + rmargin;
 
         let mut props = Props { x: 20, y: tmargin, height: 45,
             width: lmargin, lheight: 15, spacing: 10 };
 
-        let lheight = tmargin + props.height + (self.states.len() as u32 *
-            (props.lheight + (props.spacing * 2)));
+        let mut sharedlegend = true;
+        let mut lheight = tmargin + props.height;
+
+        /*
+         * We need to add in our legend height, but to determine this, we
+         * need to see to what degree we will be sharing legends.
+         */
+        for i in 0..statemaps.len() {
+            if i == 0 || statemaps[i].states != statemaps[i - 1].states {
+                lheight += statemaps[i].states.len() as u32 *
+                    (props.lheight + (props.spacing * 2));
+
+                if i > 0 {
+                    lheight += props.spacing * 2;
+                    sharedlegend = false;
+                }
+            }
+        }
 
         let globals = StatemapSVGGlobals {
-            begin: self.config.begin,
-            end: self.config.end,
-            pixelWidth: config.stripWidth,
+            begin: base.config.begin,
+            end: base.config.end,
+            pixelWidth: self.config.stripWidth,
             pixelHeight: height - tmargin,
             totalHeight: cmp::max(height, lheight),
-            timeWidth: timeWidth,
+            timeWidth: timeWidth as u64,
             lmargin: lmargin,
             tmargin: tmargin,
+            smargin: smargin,
             entityPrefix: "statemap-entity-".to_string(),
-            states: &self.states,
+            states: &base.states,
             start: &metadata.start,
             entityKind: match metadata.entityKind {
                 Some(ref kind) => { kind }
@@ -1639,48 +1950,27 @@ impl Statemap {
         };
 
         /*
-         * Sort our entities, by whatever criteria has been specified.
-         */
-        let sort = match config.sortby {
-            None => None,
-            Some(ref sortby) => {
-                if metadata.states.contains_key(sortby) {
-                    Some(metadata.states.get(sortby).unwrap().value)
-                } else {
-                    if sortby == "entity" {
-                        /*
-                         * A state of "entity" denotes that we should sort
-                         * by entity name.
-                         */
-                        None
-                    } else {
-                        return self.err(&format!(concat!("cannot sort by ",
-                            "state \"{}\": no such state"), sortby));
-                    }
-                }
-            }
-        };
-
-        let entities = self.sort(sort);
-
-        /*
          * Make sure that all of our colors are valid.
          */
-        let mut colors: Vec<StatemapColor> = vec![];
+        let mut colors: Vec<Vec<StatemapColor>> = vec![];
 
-        for i in 0..self.states.len() {
-            match self.states[i].color {
-                Some(ref name) => {
-                    match StatemapColor::from_str(name) {
-                        Ok(color) => colors.push(color),
-                        Err(_err) => {
-                            return self.err(&format!(concat!("illegal color",
-                                "\"{}\" for state \"{}\""), name,
-                                self.states[i].name));
+        for i in 0..statemaps.len() {
+            for j in 0..statemaps[i].states.len() {
+                colors.push(vec![]);
+
+                match statemaps[i].states[j].color {
+                    Some(ref name) => {
+                        match StatemapColor::from_str(name) {
+                            Ok(color) => colors[i].push(color),
+                            Err(_err) => {
+                                return base.err(&format!(concat!("illegal ",
+                                    "color \"{}\" for state \"{}\""), name,
+                                    statemaps[i].states[j].name));
+                            }
                         }
                     }
+                    None => colors[i].push(StatemapColor::random())
                 }
-                None => colors.push(StatemapColor::random())
             }
         }
 
@@ -1692,50 +1982,48 @@ impl Statemap {
                 version="1.1"
                 onload="init(evt)">"##, width, globals.totalHeight);
 
-        self.output_defs(config, &globals);
+        self.output_defs(&globals);
 
-        println!(r##"<svg x="{}px" y="{}px" width="{}px" height="{}px">"##,
-            lmargin, tmargin, globals.pixelWidth, height - tmargin);
+        let mut y = tmargin;
 
-        /*
-         * First, we drop down a background rectangle as big as our SVG. This
-         * color will be changed dynamically to be a highlight color, and
-         * then rectangles can be made transparent to become highlighted.
-         */
-        println!(concat!(r##"<rect x="0px" y="0px" width="{}px" "##,
-            r##"height="{}px" fill="{}" id="statemap-highlight" />"##),
-            globals.pixelWidth, height - tmargin, config.background);
+        for i in 0..statemaps.len() {
+            let statemap = &statemaps[i];
 
-        println!(r##"<g id="statemap" transform="matrix(1 0 0 1 0 0)">"##);
+            let height = statemap.entities.len() as u32 *
+                self.config.stripHeight;
 
-        let mut y = 0;
-        let mut data = HashMap::new();
+            println!(r##"<svg x="{}px" y="{}px" width="{}px" height="{}px">"##,
+                lmargin, y, globals.pixelWidth, height);
 
-        for e in entities {
-            let entity = self.entities.get(self.byid.get(e).unwrap()).unwrap();
+            /*
+             * First, we drop down a background rectangle as big as our SVG.
+             * This color will be changed dynamically to be a highlight color,
+             * and then rectangles can be made transparent to become
+             * highlighted.
+             */
+            println!(concat!(r##"<rect x="0px" y="0px" width="{}px" "##,
+                r##"height="{}px" fill="{}" id="statemap-{}-highlight" />"##),
+                globals.pixelWidth, height, self.config.background, i);
 
-            println!("{}", e);
-            data.insert(&entity.name,
-                entity.output_svg(config, &globals, &colors, y));
-            y += config.stripHeight;
+            statemap.output_svg(i, &self.config, &globals, &colors[i])?;
+
+            println!("</svg>");
+
+            /*
+             * The border around this statemap.
+             */
+            println!(r##"<polygon class="statemap-border""##);
+            println!(r##"  points="{} {}, {} {}, {} {}, {} {}"/>"##,
+                lmargin, y, lmargin + globals.pixelWidth, y,
+                lmargin + globals.pixelWidth, y + height, lmargin, y + height);
+
+            y += height + smargin;
         }
-
-        println!("</g>");
-        println!("</svg>");
-
-        output_data(&data);
-
-        /*
-         * The border around our statemap.
-         */
-        println!(r##"<polygon class="statemap-border""##);
-        println!(r##"  points="{} {}, {} {}, {} {}, {} {}"/>"##,
-            lmargin, tmargin, lmargin + globals.pixelWidth, tmargin,
-            lmargin + globals.pixelWidth, height, lmargin, height);
 
         println!(concat!(r##"<text x="{}" y="{}" "##,
             r##"class="statemap-title sansserif">{}</text>"##),
-            lmargin + (globals.pixelWidth / 2), 16, metadata.title);
+            lmargin + (globals.pixelWidth / 2), 16,
+            self.title(statemaps));
 
         println!(concat!(r##"<text x="{}" y="{}" class="statemap-timelabel"##,
             r##" sansserif" id="statemap-timelabel"></text>"##),
@@ -1750,86 +2038,22 @@ impl Statemap {
         output_controls(&props);
 
         props.y += props.height;
-        output_legend(&props, &colors);
+
+        for i in 0..statemaps.len() {
+            if i == 0 || statemaps[i].states != statemaps[i - 1].states {
+                output_legend(&statemaps[i], i, &mut props, &colors[i]);
+            }
+
+            if !sharedlegend {
+                props.y += props.spacing * 2;
+            }
+        }
 
         output_tagbox();
 
         println!("</svg>");
 
         Ok(())
-    }
-}
-
-fn try_parse<'de, T>(content: &mut &'de str)
-    -> Result<Option<T>, serde_json::Error>
-where
-    T: serde::Deserialize<'de>
-{
-    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
-    match de.next() {
-        Some(Ok(value)) => {
-            *content = &content[de.byte_offset()..];
-            Ok(Some(value))
-        }
-        Some(Err(err)) => Err(err),
-        None => Ok(None),
-    }
-}
-
-fn try_parse_raw<'de, T>(content: &mut &'de str)
-    -> Result<Option<(T, serde_json::Value)>, serde_json::Error>
-where
-    T: serde::Deserialize<'de>
-{
-    let mut de = serde_json::Deserializer::from_str(*content).into_iter();
-    let offset = de.byte_offset();
-
-    match de.next() {
-        Some(Ok(value)) => {
-            let v: serde_json::Value =
-                serde_json::from_str(&content[offset..de.byte_offset()])?;
-
-            *content = &content[de.byte_offset()..];
-
-            Ok(Some((value, v)))
-        }
-        Some(Err(err)) => Err(err),
-        None => Ok(None),
-    }
-}
-
-fn line_number(mmap: &[u8], byte_offset: usize) -> usize {
-    let mut nls = mmap[..byte_offset].iter().filter(|&&b| b == b'\n').count();
-
-    /*
-     * We report the line number of the first non-whitespace character after
-     * byte_offset.
-     */
-    for b in mmap[byte_offset..].iter() {
-        if *b == b'\n' {
-            nls += 1;
-        }
-
-        if !((*b as char).is_whitespace()) {
-            break;
-        }
-    }
-
-    nls + 1
-}
-
-/*
- * The time value is written in the input as a JSON string containing a number.
- * Deserialize just the number here without allocating memory for a String.
- */
-fn datum_time_from_string<'de, D>(deserializer: D) -> Result<u64, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: &str = serde::Deserialize::deserialize(deserializer)?;
-    match u64::from_str(s) {
-        Ok(time) => Ok(time),
-        Err(_) => Err(serde::de::Error::custom("illegal time value")),
     }
 }
 
@@ -1968,10 +2192,7 @@ mod tests {
         });
     }
 
-    fn good_statemap(raw: &str) -> Statemap {
-        let mut config: Config = Default::default();
-        config.notags = false;
-
+    fn good_statemap(config: &Config, raw: &str) -> Statemap {
         let mut statemap = Statemap::new(&config);
 
         match statemap_ingest(&mut statemap, raw) {
@@ -1984,8 +2205,17 @@ mod tests {
 
     macro_rules! good_statemap {
         ($what:expr) => ({
-            good_statemap(include_str!(concat!("../tst/tst.", $what, ".in")))
-        })
+            let mut config: Config = Default::default();
+            config.notags = false;
+
+            good_statemap(&config,
+                include_str!(concat!("../tst/tst.", $what, ".in")))
+        });
+
+        ($what:expr, $conf:expr) => ({
+            good_statemap($conf,
+                include_str!(concat!("../tst/tst.", $what, ".in")))
+        });
     }
 
     #[test]
@@ -2672,6 +2902,26 @@ mod tests {
     fn tag_redefined() {
         let statemap = good_statemap!("tag_redefined");
         println!("{:?}", statemap.tags);
+        statemap.verify();
+    }
+
+    #[test]
+    fn timebounds() {
+        let statemap = good_statemap!("io");
+        let _timebounds = statemap.timebounds();
+
+        let mut config: Config = Default::default();
+        config.begin = 100000;
+
+        let bounded = good_statemap!("io", &config);
+        println!("{:?}", bounded.timebounds());
+
+        config.begin = -100000;
+        config.end = 10000;
+
+        let bounded = good_statemap!("io", &config);
+        println!("{:?}", bounded.timebounds());
+
         statemap.verify();
     }
 }

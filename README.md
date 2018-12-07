@@ -74,6 +74,18 @@ as input to the `statemap` command:
 <td>SmartOS</td>
 <td>PostgreSQL processes, with ZFS-specific states</td>
 </tr>
+<tr>
+<td><a href="./contrib/spa-sync-statemap.d">spa-sync-statemap.d</a></td>
+<td>DTrace</td>
+<td>SmartOS</td>
+<td>ZFS SPA sync thread state</td>
+</tr>
+<tr>
+<td><a href="./contrib/vdev-statemap.d">vdev-statemap.d</a></td>
+<td>DTrace</td>
+<td>SmartOS</td>
+<td>I/O activity by ZFS vdev</td>
+</tr>
 </table>
 
 ### Data format
@@ -117,7 +129,8 @@ second (the 1st element).  The start time should be expressed in UTC.
 In addition, the metadata can contain the following optional fields are
 optional:
 
-- `title`: The title of the statemap.
+- `title`: The title of the statemap, such that it can meaningfully be
+  in the clause "statemap of `title` activity."
 
 - `host`: The host on which the data was gathered.
 
@@ -246,4 +259,23 @@ click as well as the state.  Zooming when a time is selected will center
 the zoomed statemap at the specified time.  To clear the time, click on
 the time label above the statemap; to select another time, simply click
 on the statemap.
+
+## Stacked statemaps
+
+To render a single SVG that contains multiple statemaps, multiple data
+files can be provided:
+
+    statemap data-1.out data-2.out > statemap.svg
+
+The resulting statemaps will be stacked in the order of the data files as
+provided on the command line, with the first data file dictating the time
+bounds of the resulting stack.  The statemaps can be similar statemaps from
+dissimilar entities (e.g., different machines), or they can be dissimilar
+statemaps (e.g., different statemaps), or any mix of these.  Legends for
+similar statemaps will be shared.
+
+When statemaps are stacked, the coalescing factor applies to *each* statemap
+rather than to the entire stack of statemaps.  When stacking many statemaps,
+low coalescing factors will be needed to prevent the resulting SVG from
+becoming excessively large.
 

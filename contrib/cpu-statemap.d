@@ -24,8 +24,7 @@ BEGIN
 	wall = walltimestamp;
 	printf("{\n\t\"start\": [ %d, %d ],\n",
 	    wall / 1000000000, wall % 1000000000);
-	printf("\t\"title\": \"Statemap for CPU activity on %s\",\n",
-	    `utsname.nodename);
+	printf("\t\"title\": \"CPU\",\n");
 	printf("\t\"host\": \"%s\",\n", `utsname.nodename);
 	printf("\t\"states\": {\n");
 

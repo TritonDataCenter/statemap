@@ -28,8 +28,7 @@ BEGIN
 	wall = walltimestamp;
 	printf("{\n\t\"start\": [ %d, %d ],\n",
 	    wall / 1000000000, wall % 1000000000);
-	printf("\t\"title\": \"Statemap for LX process ID %s on %s\",\n",
-	    $$1, `utsname.nodename);
+	printf("\t\"title\": \"LX process ID %s\",\n", $$1);
 	printf("\t\"host\": \"%s\",\n", `utsname.nodename);
 	printf("\t\"states\": {\n");
 

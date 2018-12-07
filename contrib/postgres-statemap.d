@@ -29,8 +29,7 @@ BEGIN
 	wall = walltimestamp;
 	printf("{\n\t\"start\": [ %d, %d ],\n",
 	    wall / 1000000000, wall % 1000000000);
-	printf("\t\"title\": \"PostgreSQL statemap on %s, by process ID\",\n",
-	    `utsname.nodename);
+	printf("\t\"title\": \"PostgreSQL\",\n");
 	printf("\t\"host\": \"%s\",\n", `utsname.nodename);
 	printf("\t\"entityKind\": \"Process\",\n");
 	printf("\t\"states\": {\n");

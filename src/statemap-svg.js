@@ -5,7 +5,7 @@
 /*
  * This file is dropped into the generated SVG -- and if you're looking at
  * the generated SVG and wondering where this comes from, look for
- * statemap-svg.js in statemap's lib directory.
+ * statemap-svg.js in statemap's src directory.
  */
 
 var g_transMatrix = [1, 0, 0, 1, 0, 0];		/* transform of statemap */
@@ -14,15 +14,13 @@ var g_offset;					/* x offset of statemap */
 var g_timelabel;				/* label for time spanned */
 var g_timebar;					/* timebar, if any */
 var g_statebar;					/* statebar, if any */
-var g_statemap;					/* statemap element */
 var g_height;					/* pixel height of statemap */
 var g_width;					/* pixel width of statemap */
-var g_entities;					/* array of entities */
 var g_statesel;					/* state selection, if any */
 var g_tagsel;					/* tag selection, if any */
 var g_tagvalsel;				/* tag val selection, if any */
 
-var g_data;
+var g_statemaps = [];				/* array of statemaps */
 
 var timeunits = function (timeval)
 {
@@ -32,7 +30,8 @@ var timeunits = function (timeval)
 	if (timeval === 0)
 		return ('0');
 
-	for (i = 0; timeval > 1000 && i < suffixes.length - 1; i++)
+	for (i = 0; (timeval > 1000 || timeval < -1000) &&
+	    i < suffixes.length - 1; i++)
 		timeval /= 1000;
 
 	rem = Math.floor((timeval - Math.floor(timeval)) * 1000);
@@ -95,12 +94,67 @@ var timeSetSpanLabel = function ()
 	g_timelabel.textContent = t;
 };
 
+var initStatemap = function (statemap, elem, position)
+{
+	var i, highlight;
+	var prefix = globals.entityPrefix + statemap + '-';
+
+	g_statemaps[statemap].elem = elem;
+
+	/*
+	 * Iterate over this statemap's children, looking for entities.
+	 */
+	for (i = 0; i < elem.childNodes.length; i++) {
+		var id = elem.childNodes[i].id, entity;
+
+		if (!id || id.indexOf(prefix) !== 0)
+			continue;
+
+		entity = {
+			name: id.substr(prefix.length),
+			element: elem.childNodes[i],
+			position: position++,
+			statemap: statemap
+		};
+
+		entity.description =
+		    g_statemaps[statemap].entities[entity.name].description;
+
+		g_entities[id] = entity;
+	}
+
+	/*
+	 * Determine the legend that this statemap is using.
+	 */
+	for (i = statemap; i >= 0; i--) {
+		if (g_svgDoc.getElementById('statemap-legend-' + i + '-0')) {
+			g_statemaps[statemap].legend = i;
+			break;
+		}
+	}
+
+	console.assert(i >= 0);
+
+	/*
+	 * Dynamically change the styling of the highlight rectangle.
+	 */
+	highlight = g_svgDoc.getElementById('statemap-' +
+	    statemap + '-highlight');
+	highlight.classList.add('statemap-highlight');
+
+	return (position);
+};
+
 var init = function (evt)
 {
-	var i, position = 0;
+	var i = 0, position = 0, statemap;
 
 	g_svgDoc = evt.target.ownerDocument;
-	g_statemap = g_svgDoc.getElementById('statemap');
+	g_entities = [];
+
+	while ((statemap = g_svgDoc.getElementById('statemap-' + i)) != null)
+		position = initStatemap(i++, statemap, position);
+
 	g_height = globals.pixelHeight;
 	g_width = globals.pixelWidth;
 
@@ -111,34 +165,11 @@ var init = function (evt)
 	timeSetSpanLabel();
 
 	g_timebar = undefined;
-	g_entities = [];
-
-	/*
-	 * Iterate over our statemap's children, looking for entities.
-	 */
-	for (i = 0; i < g_statemap.childNodes.length; i++) {
-		var id = g_statemap.childNodes[i].id;
-
-		if (!id || id.indexOf(globals.entityPrefix) !== 0)
-			continue;
-
-		g_entities[id] = {
-			name: id.substr(globals.entityPrefix.length),
-			element: g_statemap.childNodes[i],
-			position: position++
-		};
-	}
-
-	/*
-	 * Dynamically change the styling of the highlight rectangle.
-	 */
-	var highlight = g_svgDoc.getElementById('statemap-highlight');
-	highlight.classList.add('statemap-highlight');
 };
 
 var entityForEachDatum = function (entity, time, etime, func)
 {
-	var data = g_data[entity.name];
+	var data = g_statemaps[entity.statemap].data[entity.name];
 
 	var idx, length = data.length;
 	var floor = 0;
@@ -213,7 +244,8 @@ var entityForEachDatum = function (entity, time, etime, func)
 
 var entityDatum = function (entity, idx)
 {
-	var datum = g_data[entity.name][idx];
+	var data = g_statemaps[entity.statemap].data[entity.name];
+	var datum = data[idx];
 	var rval = { time: datum.t };
 
 	if (datum.s instanceof Object) {
@@ -222,8 +254,8 @@ var entityDatum = function (entity, idx)
 		rval.state = datum.s;
 	}
 
-	if (idx + 1 < g_data[entity.name].length) {
-		rval.etime = g_data[entity.name][idx + 1].t;
+	if (idx + 1 < data.length) {
+		rval.etime = data[idx + 1].t;
 	} else {
 		rval.etime = globals.timeWidth + globals.begin;
 	}
@@ -233,13 +265,15 @@ var entityDatum = function (entity, idx)
 
 var entityBreakdown = function (entity, time, etime)
 {
-	var data = g_data[entity.name];
+	var data = g_statemaps[entity.statemap].data[entity.name];
 	var rval = {};
 
 	var idx, length = data.length;
 	var floor = 0;
 	var ceil = length;
 	var datum, t, span, state;
+
+	time += g_statemaps[entity.statemap].offset;
 
 	if (length === 0 || data[0].t > time)
 		return ({});
@@ -346,20 +380,21 @@ var statebarCreateBar = function (statebar, x1, y1, x2, y2)
 
 var statebarCreate = function (elem, idx)
 {
-	var parent = g_statemap.parentNode.parentNode;
+	var parent = g_statemaps[0].elem.parentNode.parentNode;
 	var statebar = { parent: parent, hidden: false };
 	var entity = g_entities[elem.parentNode.id];
+	var states = g_statemaps[entity.statemap].states;
 	var datum = entityDatum(entity, idx);
-	var pos = entity.position;
+	var pos = (entity.position * globals.stripHeight) +
+	    (entity.statemap * globals.smargin);
 	var x = globals.lmargin - 2;
-	var y = globals.tmargin + (pos * globals.stripHeight);
+	var y = globals.tmargin + pos;
 	var elbow = { x: 8, y: 10 };
 	var nudge = { x: 3, y: 2 };
 	var direction = 1, anchor;
 	var text;
 
-	if (pos * globals.stripHeight <
-	    (globals.totalHeight - globals.tmargin) / 2) {
+	if (pos < (globals.totalHeight - globals.tmargin) / 2) {
 		direction = 1;
 		anchor = 'end';
 	} else {
@@ -390,13 +425,13 @@ var statebarCreate = function (elem, idx)
 	text.classList.add('sansserif');
 	text.classList.add('statemap-statetext');
 
-	var t = globals.entityKind + ' ' + entity.name;
+	var t = g_statemaps[entity.statemap].entityKind + ' ' + entity.name;
 
-	if (globals.entities[entity.name].description)
-		t += ' (' + globals.entities[entity.name].description + ')';
+	if (entity.description)
+		t += ' (' + entity.description + ')';
 
 	if (datum.hasOwnProperty('state')) {
-		t += ', ' + globals.states[datum.state].name;
+		t += ', ' + states[datum.state].name;
 	} else {
 		var i, total = 0, max = 0, maxstate;
 
@@ -410,7 +445,7 @@ var statebarCreate = function (elem, idx)
 		}
 
 		t += ', ' + Math.floor((datum.states[maxstate] / total) * 100);
-		t += '% ' + globals.states[maxstate].name;
+		t += '% ' + states[maxstate].name;
 	}
 
 	t += ' at ' + timeunits(datum.time);
@@ -571,35 +606,51 @@ var timebarSetMiddle = function (timebar)
 
 var timebarSetBreakdown = function (time)
 {
-	var breakdown, state, total = {};
+	var breakdown, state, total = [];
 	var entity;
-	var sum = 0;
+	var sum = {};
 	var rval = [];
 
-	var click = function (s) {
-		return (function (evt) { legendclick(evt, s); });
+	var click = function (statemap, s) {
+		return (function (evt) { legendclick(evt, statemap, s); });
 	};
 
 	time += globals.begin;
 
 	for (entity in g_entities) {
+		var statemap = g_statemaps[g_entities[entity].statemap].legend;
+
 		breakdown = entityBreakdown(g_entities[entity], time);
 
-		for (state in breakdown) {
-			if (!total.hasOwnProperty(state))
-				total[state] = 0;
+		if (!total[statemap]) {
+			total[statemap] = {};
+			sum[statemap] = 0;
+		}
 
-			sum += breakdown[state];
-			total[state] += breakdown[state];
+		for (state in breakdown) {
+			if (!total[statemap].hasOwnProperty(state))
+				total[statemap][state] = 0;
+
+			sum[statemap] += breakdown[state];
+			total[statemap][state] += breakdown[state];
 		}
 	}
 
-	for (state in total) {
+	var settotal = function (statemap, state) {
 		var legend, parent, text;
 		var x, y, width, height, t;
 		var nudge = 3;
 
-		legend = g_svgDoc.getElementById('statemap-legend-' + state);
+		/*
+		 * Iterate down until we find a valid legend.  We know that
+		 * that there will be at least one, but we break out of the
+		 * loop anyway if we don't find it to allow the failure mode
+		 * here to be an unreferenced property rather than an
+		 * inifinite loop.
+		 */
+		legend = g_svgDoc.getElementById('statemap-legend-' +
+		    statemap + '-' + state);
+
 		parent = legend.parentNode;
 
 		x = parseInt(legend.getAttributeNS(null, 'x'), 10);
@@ -607,8 +658,9 @@ var timebarSetBreakdown = function (time)
 		width = parseInt(legend.getAttributeNS(null, 'width'), 10);
 		height = parseInt(legend.getAttributeNS(null, 'height'), 10);
 
-		t = Math.floor(total[state]) + ' (' +
-		    Math.floor((total[state] / sum) * 100) + '%)';
+		t = Math.floor(total[statemap][state]) + ' (' +
+		    Math.floor((total[statemap][state] /
+		    sum[statemap]) * 100) + '%)';
 
 		text = g_svgDoc.createElementNS(parent.namespaceURI, 'text');
 		text.classList.add('sansserif');
@@ -618,11 +670,17 @@ var timebarSetBreakdown = function (time)
 		text.setAttributeNS(null, 'x', x + (width / 2));
 		text.setAttributeNS(null, 'y', y + (height / 2) + nudge);
 		text.setAttributeNS(null, 'text-anchor', 'middle');
+
 		text.addEventListener('click',
-		    click(globals.states[state].value));
+		    click(statemap, g_statemaps[statemap].states[state].value));
 
 		parent.appendChild(text);
 		rval.push(text);
+	};
+
+	for (statemap in total) {
+		for (state in total[statemap])
+			settotal(statemap, state);
 	}
 
 	return (rval);
@@ -630,7 +688,7 @@ var timebarSetBreakdown = function (time)
 
 var timebarCreate = function (mapX)
 {
-	var parent = g_statemap.parentNode.parentNode;
+	var parent = g_statemaps[0].elem.parentNode.parentNode;
 	var bar, text;
 	var timebar = { parent: parent, hidden: false };
 
@@ -665,7 +723,7 @@ var stateselTagvalSelect = function (evt, tagval)
 {
 	var tagdefs = {};
 	var i, entity;
-	var state;
+	var state, tags;
 	var child;
 	var highlight = 'statemap-tagbox-select-highlighted';
 
@@ -673,6 +731,7 @@ var stateselTagvalSelect = function (evt, tagval)
 		return;
 
 	state = g_statesel.state;
+	tags = g_statemaps[g_statesel.statemap].tags;
 
 	if (g_tagvalsel && g_tagvalsel.selected) {
 		for (i = 0; i < g_tagvalsel.selected.length; i++) {
@@ -705,11 +764,11 @@ var stateselTagvalSelect = function (evt, tagval)
 	 * the specified tag (for the specified state) matches the specified
 	 * tag value.
 	 */
-	for (i = 0; i < globals.tags.length; i++) {
-		if (globals.tags[i].state != state)
+	for (i = 0; i < tags.length; i++) {
+		if (tags[i].state != state)
 			continue;
 
-		if (globals.tags[i][g_tagsel.tag] != tagval)
+		if (tags[i][g_tagsel.tag] != tagval)
 			continue;
 
 		tagdefs[i] = true;
@@ -718,9 +777,10 @@ var stateselTagvalSelect = function (evt, tagval)
 	/*
 	 * Now for each entity, we will plow through every rectangle.
 	 */
-	for (entity in g_entities) {
-		var elem = g_entities[entity].element;
-		var data = g_data[g_entities[entity].name];
+	for (id in g_entities) {
+		var entity = g_entities[id];
+		var elem = entity.element;
+		var data = g_statemaps[entity.statemap].data[entity.name];
 		var j = 0;
 
 		for (i = 0; i < elem.childNodes.length; i++) {
@@ -769,12 +829,13 @@ var stateselUpdate = function ()
 	var base, etime, nentities = 0;
 	var state, entity;
 	var bytag = {}, tagval;
-	var header, i;
+	var header, i, tags;
 
 	if (g_statesel == undefined)
 		return;
 
 	state = g_statesel.state;
+	tags = g_statemaps[g_statesel.statemap].tags;
 
 	var sum = function (datum, id, span) {
 		var tid, tag;
@@ -793,7 +854,7 @@ var stateselUpdate = function ()
 			return;
 
 		for (tid in datum.g) {
-			tag = globals.tags[tid];
+			tag = tags[tid];
 
 			if (tag.state != state)
 				continue;
@@ -814,7 +875,7 @@ var stateselUpdate = function ()
 	header = '';
 
 	if (g_statebar && g_statebar.entity) {
-		header = globals.entityKind + ' ' +
+		header = g_statemaps[g_statesel.statemap].entityKind + ' ' +
 		    g_statebar.entity.name + ' ';
 	}
 
@@ -1013,9 +1074,12 @@ var stateselClearTagbox = function ()
 		elem.removeChild(elem.childNodes[0]);
 };
 
-var stateselSelect = function (state)
+var stateselSelect = function (statemap, state)
 {
-	var legend = g_svgDoc.getElementById('statemap-legend-' + state);
+	var legend = g_svgDoc.getElementById('statemap-legend-' +
+	    g_statemaps[statemap].legend + '-' + state);
+	var states = g_statemaps[statemap].states;
+	var alltags = g_statemaps[statemap].tags;
 	var tags = {};
 	var i, t;
 	var lmargin = 20;
@@ -1024,7 +1088,7 @@ var stateselSelect = function (state)
 	legend.classList.add('statemap-legend-highlighted');
 	stateselClearTagbox();
 
-	t = 'tags for ' + globals.states[state].name;
+	t = 'tags for ' + states[state].name;
 
 	var tagbox = g_svgDoc.getElementById('statemap-tagbox');
 	var x = offset + lmargin;
@@ -1053,11 +1117,11 @@ var stateselSelect = function (state)
 	/*
 	 * Now add text for each possible tag for this state.
 	 */
-	for (i = 0; i < globals.tags.length; i++) {
-		if (globals.tags[i].state !== state)
+	for (i = 0; i < alltags.length; i++) {
+		if (alltags[i].state !== state)
 			continue;
 
-		for (t in globals.tags[i]) {
+		for (t in alltags[i]) {
 			if (t == 'state' || t == 'tag')
 				continue;
 
@@ -1086,19 +1150,21 @@ var stateselSelect = function (state)
 		y += 18;
 	}
 
-	g_statesel = { state: state, x: x, y: y, x2: x2 };
+	g_statesel = { statemap: statemap, state: state, x: x, y: y, x2: x2 };
 	stateselUpdate();
 };
 
 var stateselClear = function ()
 {
-	var state, legend;
+	var state, statemap, legend;
 
 	if (g_statesel == undefined)
 		return (-1);
 
 	state = g_statesel.state;
-	legend = g_svgDoc.getElementById('statemap-legend-' + state);
+	statemap = g_statesel.statemap;
+	legend = g_svgDoc.getElementById('statemap-legend-' +
+	    statemap + '-' + state);
 	legend.classList.remove('statemap-legend-highlighted');
 
 	stateselClearTagbox();
@@ -1108,16 +1174,27 @@ var stateselClear = function ()
 	return (state);
 };
 
+var statemapsUpdate = function ()
+{
+	var i;
+	var newMatrix = 'matrix(' +  g_transMatrix.join(' ') + ')';
+
+	for (i = 0; i < g_statemaps.length; i++) {
+		g_statemaps[i].elem.setAttributeNS(null,
+		    'transform', newMatrix);
+	}
+};
+
 /*
  * All of the following *click() functions are added at the time of statemap
  * generation.
  */
-var legendclick = function (evt, state)
+var legendclick = function (evt, statemap, state)
 {
 	if (globals.notags || stateselClear() == state)
 		return;
 
-	stateselSelect(state);
+	stateselSelect(statemap, state);
 	stateselUpdate();
 };
 
@@ -1157,9 +1234,7 @@ var panclick = function (dx, dy)
 		g_transMatrix[5] = minY;
 
 	timeSetSpanLabel();
-
-	var newMatrix = 'matrix(' +  g_transMatrix.join(' ') + ')';
-	g_statemap.setAttributeNS(null, 'transform', newMatrix);
+	statemapsUpdate();
 	timebarShow(g_timebar);
 	stateselUpdate();
 };
@@ -1200,9 +1275,7 @@ var zoomclick = function (scale)
 		g_transMatrix = [1, 0, 0, 1, 0, 0];
 
 	timeSetSpanLabel();
-
-	var newMatrix = 'matrix(' +  g_transMatrix.join(' ') + ')';
-	g_statemap.setAttributeNS(null, 'transform', newMatrix);
+	statemapsUpdate();
 	timebarShow(g_timebar);
 	stateselUpdate();
 };
