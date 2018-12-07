@@ -144,6 +144,13 @@ fn main() {
             alias: None,
         },
         Opt {
+            name: ("S", "stacksortby"),
+            help: "state to sort stacked statemaps by",
+            hint: "STATE",
+            hasarg: HasArg::Yes,
+            alias: None,
+        },
+        Opt {
             name: ("i", "ignore-tags"),
             help: "ignore tags in input",
             hint: "",
@@ -268,6 +275,7 @@ fn main() {
     let mut svgconf: StatemapSVGConfig = Default::default();
 
     svgconf.sortby = matches.opt_str("sortby");
+    svgconf.stacksortby = matches.opt_str("stacksortby");
 
     if let Some(str) = matches.opt_str("state-height") {
         match str.parse::<u32>() {

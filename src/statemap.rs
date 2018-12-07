@@ -84,6 +84,7 @@ pub struct StatemapSVGConfig {
     pub stripWidth: u32,
     pub background: String,
     pub sortby: Option<String>,
+    pub stacksortby: Option<String>,
 }
 
 #[derive(Copy,Clone,Debug)]
@@ -215,6 +216,7 @@ impl Default for StatemapSVGConfig {
             tagWidth: 250,
             background: "#f0f0f0".to_string(),
             sortby: None,
+            stacksortby: None,
         }
     }
 }
@@ -1071,6 +1073,20 @@ impl Statemap {
         });
 
         v.iter().map(|e| e.2).collect()
+    }
+
+    /*
+     * Return the total time spent across all entities and all rectangles
+     * in a particular state, for purposes of assigning a weight to the
+     * statemap itself.
+     */
+    fn weight(&self, state: usize) -> u64
+    {
+        self.entities.values().fold(0, |ttl, e| {
+            ttl + e.rects.values().fold(0, |i, r| {
+                i + r.borrow().states[state]
+            })
+        })
     }
 
     #[cfg(test)]
@@ -1974,6 +1990,36 @@ impl<'a> StatemapSVG<'a> {
             }
         }
 
+        let sorted: Vec<usize>;
+
+        match self.config.stacksortby {
+            None => { sorted = (0..statemaps.len()).collect(); }
+            Some(ref stacksortby) => {
+                /*
+                 * If we aren't all sharing a legend, this doesn't make sense.
+                 */
+                if !sharedlegend {
+                    return base.err("can only stack sort like statemaps");
+                }
+
+                if !metadata.states.contains_key(stacksortby) {
+                    return base.err(&format!(concat!("unknown stack sorting ",
+                        "state \"{}\""), stacksortby));
+                }
+
+                let sort = metadata.states.get(stacksortby).unwrap().value;
+
+                let mut weights = statemaps.iter()
+                    .map(|s| s.weight(sort))
+                    .enumerate()
+                    .collect::<Vec<(usize, _)>>();
+
+                weights.sort_by(|&(_, l), &(_, r)| r.cmp(&l));
+
+                sorted = weights.iter().map(|&(e, _)| e).collect();
+            }
+        }
+
         println!(r##"<?xml version="1.0"?>
             <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
                 "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -1987,7 +2033,7 @@ impl<'a> StatemapSVG<'a> {
         let mut y = tmargin;
 
         for i in 0..statemaps.len() {
-            let statemap = &statemaps[i];
+            let statemap = &statemaps[sorted[i]];
 
             let height = statemap.entities.len() as u32 *
                 self.config.stripHeight;
@@ -2923,5 +2969,15 @@ mod tests {
         println!("{:?}", bounded.timebounds());
 
         statemap.verify();
+    }
+
+    #[test]
+    fn weight() {
+        let statemap = good_statemap!("io");
+
+        assert_eq!(statemap.weight(0), 737063);
+        assert_eq!(statemap.weight(1), 2290450);
+        assert_eq!(statemap.weight(2), 934399);
+        assert_eq!(statemap.weight(3), 1082403);
     }
 }

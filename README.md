@@ -248,6 +248,10 @@ SVG.)
 - `-s` (`--sortby`): The state by which to sort (default is to sort by
 entity).
 
+- `-S` (`--stacksortby`): The state by which to sort statemaps, when
+multiple like statemaps are stacked (default is for the statemaps to be in
+the order specified).
+
 ## Interaction
 
 A statemap has icons for zooming and panning.  As the statemap is zoomed,
@@ -272,7 +276,8 @@ provided on the command line, with the first data file dictating the time
 bounds of the resulting stack.  The statemaps can be similar statemaps from
 dissimilar entities (e.g., different machines), or they can be dissimilar
 statemaps (e.g., different statemaps), or any mix of these.  Legends for
-similar statemaps will be shared.
+similar statemaps will be shared.  The `-S` option can control the sorting
+of stacked like statemaps.
 
 When statemaps are stacked, the coalescing factor applies to *each* statemap
 rather than to the entire stack of statemaps.  When stacking many statemaps,
