@@ -173,6 +173,7 @@ struct StatemapSVGLocals<'a> {
     offset: i64,
     states: &'a Vec<StatemapState>,
     entityKind: &'a str,
+    title: String,
 }
 
 pub struct StatemapSVG<'a> {
@@ -1673,6 +1674,11 @@ impl Statemap {
 
         let mut y = 0;
         let mut data = HashMap::new();
+        let mut title = metadata.title.clone();
+
+        if let Some(ref host) = metadata.host {
+            title.push_str(&format!(" on {}", host));
+        }
 
         let locals = StatemapSVGLocals {
             offset: self.config.begin - globals.begin,
@@ -1681,6 +1687,7 @@ impl Statemap {
                 Some(ref kind) => { kind }
                 None => { "Entity" }
             },
+            title: title,
         };
 
         for e in entities {

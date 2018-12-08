@@ -100,6 +100,8 @@ var initStatemap = function (statemap, elem, position)
 	var prefix = globals.entityPrefix + statemap + '-';
 
 	g_statemaps[statemap].elem = elem;
+	g_statemaps[statemap].position = position;
+	g_statemaps[statemap].nentities = 0;
 
 	/*
 	 * Iterate over this statemap's children, looking for entities.
@@ -121,6 +123,7 @@ var initStatemap = function (statemap, elem, position)
 		    g_statemaps[statemap].entities[entity.name].description;
 
 		g_entities[id] = entity;
+		g_statemaps[statemap].nentities++;
 	}
 
 	/*
@@ -383,7 +386,8 @@ var statebarCreate = function (elem, idx)
 	var parent = g_statemaps[0].elem.parentNode.parentNode;
 	var statebar = { parent: parent, hidden: false };
 	var entity = g_entities[elem.parentNode.id];
-	var states = g_statemaps[entity.statemap].states;
+	var statemap = g_statemaps[entity.statemap];
+	var states = statemap.states;
 	var datum = entityDatum(entity, idx);
 	var pos = (entity.position * globals.stripHeight) +
 	    (entity.statemap * globals.smargin);
@@ -392,14 +396,15 @@ var statebarCreate = function (elem, idx)
 	var elbow = { x: 8, y: 10 };
 	var nudge = { x: 3, y: 2 };
 	var direction = 1, anchor;
+	var anchors = [ 'start', 'end' ];
 	var text;
 
 	if (pos < (globals.totalHeight - globals.tmargin) / 2) {
 		direction = 1;
-		anchor = 'end';
+		anchor = 1;
 	} else {
 		direction = -1;
-		anchor = 'start';
+		anchor = 0;
 	}
 
 	statebar.bars = [];
@@ -425,7 +430,7 @@ var statebarCreate = function (elem, idx)
 	text.classList.add('sansserif');
 	text.classList.add('statemap-statetext');
 
-	var t = g_statemaps[entity.statemap].entityKind + ' ' + entity.name;
+	var t = statemap.entityKind + ' ' + entity.name;
 
 	if (entity.description)
 		t += ' (' + entity.description + ')';
@@ -456,16 +461,60 @@ var statebarCreate = function (elem, idx)
 	text.setAttributeNS(null, 'y', y);
 	text.setAttributeNS(null, 'transform',
 	    'rotate(270,' + x + ',' + y + ')');
-	text.setAttributeNS(null, 'text-anchor', anchor);
+	text.setAttributeNS(null, 'text-anchor', anchors[anchor]);
 	text.addEventListener('click', function () {
 		statebarRemove(statebar);
 		stateselUpdate();
 	});
 
 	parent.appendChild(text);
+	statebar.bars.push(text);
 
-	statebar.text = text;
 	statebar.entity = entity;
+
+	if (g_statemaps.length == 1)
+		return (statebar);
+
+	/*
+	 * If we have more than one statemap, we want to add a bar to the right
+	 * side to indicate which statemap this is.
+	 */
+	var pos = (statemap.position * globals.stripHeight) +
+	    (entity.statemap * globals.smargin);
+
+	x = globals.lmargin + g_width + 2;
+	y = globals.tmargin + pos;
+
+	var pos = (statemap.position * globals.stripHeight) +
+	    (entity.statemap * globals.smargin);
+
+	var height = statemap.nentities * globals.stripHeight;
+
+	statebarCreateBar(statebar, x, y, x, y + height);
+
+	y += 0.5 * height;
+	statebarCreateBar(statebar, x + elbow.x, y, x, y);
+
+	x += elbow.x;
+	statebarCreateBar(statebar, x, y, x, y + (elbow.y * direction));
+
+	/*
+	 * Now create the text at the end of the elbow.
+	 */
+	y += (elbow.y + nudge.y) * direction;
+	x -= nudge.x;
+	text = g_svgDoc.createElementNS(parent.namespaceURI, 'text');
+	text.classList.add('sansserif');
+	text.classList.add('statemap-statetext');
+	text.appendChild(g_svgDoc.createTextNode(statemap.title));
+	text.setAttributeNS(null, 'x', x);
+	text.setAttributeNS(null, 'y', y);
+	text.setAttributeNS(null, 'transform',
+	    'rotate(90,' + x + ',' + y + ')');
+	text.setAttributeNS(null, 'text-anchor', anchors[anchor ^ 1]);
+
+	parent.appendChild(text);
+	statebar.bars.push(text);
 
 	return (statebar);
 };
@@ -480,11 +529,9 @@ var statebarRemove = function (statebar)
 	if (statebar.bars) {
 		for (i = 0; i < statebar.bars.length; i++)
 			statebar.parent.removeChild(statebar.bars[i]);
-		statebar.parent.removeChild(statebar.text);
 	}
 
 	statebar.bars = undefined;
-	statebar.text = undefined;
 	statebar.entity = undefined;
 };
 
