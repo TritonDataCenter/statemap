@@ -63,6 +63,17 @@ var timeFromMapX = function (mapX)
 	return (base + offs);
 };
 
+var timeToMapX = function (time)
+{
+	/*
+	 * We take the ratio of the time of the timebar of the total time
+	 * width times the width times the scale, and then add that to the
+	 * X offset in the transformation matrix.
+	 */
+	return (((time / globals.timeWidth) * g_width *
+	    g_transMatrix[0]) + g_transMatrix[4]);
+};
+
 var timeToText = function (time)
 {
 	var t;
@@ -540,6 +551,8 @@ var timebarRemove = function (timebar)
 	if (!timebar)
 		return;
 
+	timebarRemoveSubbar(timebar);
+
 	if (timebar.bar && !timebar.hidden) {
 		timebar.parent.removeChild(timebar.bar);
 		timebar.parent.removeChild(timebar.text);
@@ -568,6 +581,32 @@ var timebarSetBarLocation = function (bar, mapX)
 	bar.y1.baseVal.value = globals.tmargin - nubheight;
 	bar.x2.baseVal.value = absX;
 	bar.y2.baseVal.value = globals.tmargin + g_height;
+};
+
+var timebarSetSubbarLocation = function (subbar, mapX, timebarX)
+{
+	var absX = mapX + g_offset, x;
+	var bar = subbar.bar;
+	var span = subbar.span;
+	var text = subbar.text;
+	var nudge = { x: 0, y: 10 };
+
+	bar.x1.baseVal.value = absX;
+	bar.y1.baseVal.value = globals.tmargin;
+	bar.x2.baseVal.value = absX;
+	bar.y2.baseVal.value = globals.tmargin + g_height;
+
+	span.x1.baseVal.value = timebarX + g_offset;
+	span.y1.baseVal.value = subbar.y;
+	span.x2.baseVal.value = absX;
+	span.y2.baseVal.value = subbar.y;
+
+	x = (timebarX < mapX ? timebarX : mapX) +
+	    Math.abs(timebarX - mapX) / 2;
+
+	text.setAttributeNS(null, 'text-anchor', 'middle');
+	text.setAttributeNS(null, 'x', x + g_offset);
+	text.setAttributeNS(null, 'y', subbar.y + nudge.y);
 };
 
 var timebarSetTextLocation = function (text, mapX)
@@ -600,6 +639,43 @@ var timebarSetTextLocation = function (text, mapX)
 	return (time);
 };
 
+var timebarHideSubbar = function (timebar)
+{
+	var parent, subbar;
+
+	if (!timebar || !(subbar = timebar.subbar) || subbar.hidden)
+		return;
+
+	parent = timebar.parent;
+	parent.removeChild(subbar.bar);
+	parent.removeChild(subbar.span);
+	parent.removeChild(subbar.text);
+
+	subbar.hidden = true;
+};
+
+var timebarShowSubbar = function (timebar)
+{
+	var parent, subbar, mapX;
+
+	if (!timebar || !(subbar = timebar.subbar) || !subbar.hidden)
+		return;
+
+	mapX = timeToMapX(subbar.time)
+
+	if (mapX < 0 || mapX >= g_width)
+		return;
+
+	timebarSetSubbarLocation(subbar, mapX, timebar.x);
+
+	parent = timebar.parent;
+	parent.appendChild(subbar.bar);
+	parent.appendChild(subbar.span);
+	parent.appendChild(subbar.text);
+
+	subbar.hidden = false;
+}
+
 var timebarHide = function (timebar)
 {
 	if (!timebar || timebar.hidden || !timebar.bar)
@@ -608,6 +684,7 @@ var timebarHide = function (timebar)
 	timebar.parent.removeChild(timebar.bar);
 	timebar.parent.removeChild(timebar.text);
 	timebar.hidden = true;
+	timebarHideSubbar(timebar);
 };
 
 var timebarShow = function (timebar)
@@ -617,23 +694,20 @@ var timebarShow = function (timebar)
 	if (!timebar || !timebar.hidden)
 		return;
 
-	/*
-	 * We take the ratio of the time of the timebar of the total time
-	 * width times the width times the scale, and then add that to the
-	 * X offset in the transformation matrix.
-	 */
-	mapX = ((timebar.time / globals.timeWidth) * g_width *
-	    g_transMatrix[0]) + g_transMatrix[4];
+	mapX = timeToMapX(timebar.time);
 
 	if (mapX < 0 || mapX >= g_width)
 		return;
 
 	timebarSetBarLocation(timebar.bar, mapX);
 	timebarSetTextLocation(timebar.text, mapX);
+	timebar.x = mapX;
 
 	timebar.parent.appendChild(timebar.bar);
 	timebar.parent.appendChild(timebar.text);
 	timebar.hidden = false;
+
+	timebarShowSubbar(timebar);
 };
 
 var timebarSetMiddle = function (timebar)
@@ -752,6 +826,7 @@ var timebarCreate = function (mapX)
 
 	timebar.time = timebarSetTextLocation(text, mapX);
 	timebar.breakdown = timebarSetBreakdown(timebar.time);
+	timebar.x = mapX;
 
 	text.addEventListener('click', function () {
 		timebarRemove(timebar);
@@ -765,6 +840,53 @@ var timebarCreate = function (mapX)
 
 	return (timebar);
 };
+
+var timebarCreateSubbar = function (timebar, mapX, absY)
+{
+	var parent = timebar.parent;
+	var subbar, bar, span, text, time, delta;
+
+	bar = g_svgDoc.createElementNS(parent.namespaceURI, 'line');
+	bar.classList.add('statemap-subbar');
+
+	span = g_svgDoc.createElementNS(parent.namespaceURI, 'line');
+	span.classList.add('statemap-subbar-span');
+
+	time = timeFromMapX(mapX);
+	delta = Math.abs(timebar.time - time);
+
+	text = g_svgDoc.createElementNS(parent.namespaceURI, 'text');
+	text.classList.add('sansserif');
+	text.classList.add('statemap-subbar-text');
+	text.appendChild(g_svgDoc.createTextNode(timeunits(delta)));
+
+	var subbar = { bar: bar, span: span, text: text,
+	    time: time, y: absY, hidden: false };
+
+	timebarSetSubbarLocation(subbar, mapX, timebar.x);
+
+	parent.appendChild(bar);
+	parent.appendChild(span);
+	parent.appendChild(text);
+
+	timebar.subbar = subbar;
+}
+
+var timebarRemoveSubbar = function (timebar)
+{
+	var subbar = timebar.subbar;
+
+	if (!subbar)
+		return;
+
+	if (!subbar.hidden) {
+		timebar.parent.removeChild(subbar.bar);
+		timebar.parent.removeChild(subbar.span);
+		timebar.parent.removeChild(subbar.text);
+	}
+
+	timebar.subbar = undefined;
+}
 
 var stateselTagvalSelect = function (evt, tagval)
 {
@@ -1248,6 +1370,15 @@ var legendclick = function (evt, statemap, state)
 var mapclick = function (evt, idx)
 {
 	var x = evt.clientX - g_offset;
+
+	if (evt.shiftKey || evt.altKey) {
+		if (!g_timebar || !g_timebar.bar)
+			return;
+
+		timebarRemoveSubbar(g_timebar);
+		timebarCreateSubbar(g_timebar, x, evt.clientY);
+		return;
+	}
 
 	timebarRemove(g_timebar);
 	g_timebar = timebarCreate(x);

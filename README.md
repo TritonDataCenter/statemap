@@ -264,6 +264,12 @@ the zoomed statemap at the specified time.  To clear the time, click on
 the time label above the statemap; to select another time, simply click
 on the statemap.
 
+Shift-clicking (or Option-/Alt-clicking) on a statemap when a time is
+highlighted will highlight a dotted line at the time selected, as well
+as an indication of the time between the initial time highlighted and
+the time selected.  This allows for the time delta between two events
+to be easily ascertained.
+
 ## Stacked statemaps
 
 To render a single SVG that contains multiple statemaps, multiple data
@@ -283,4 +289,3 @@ When statemaps are stacked, the coalescing factor applies to *each* statemap
 rather than to the entire stack of statemaps.  When stacking many statemaps,
 low coalescing factors will be needed to prevent the resulting SVG from
 becoming excessively large.
-

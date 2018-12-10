@@ -57,6 +57,29 @@
 	cursor:		default;
 }
 
+.statemap-subbar {
+	stroke:		blue;
+	fill:		blue;
+	stroke-width:	1px;
+	stroke-dasharray: 5.7;
+}
+
+.statemap-subbar-span {
+	stroke:		blue;
+	fill:		blue;
+	stroke-width:	0.75px;
+	stroke-dasharray: 1;
+}
+
+.statemap-subbar-text {
+	font-size:	8pt;
+	font-weight:	bold;
+	fill:		blue;
+	stroke:		white;
+	stroke-width:	0.3px;
+	cursor:		default;
+}
+
 .statemap-statebar {
 	stroke:		blue;
 	fill:		blue;
