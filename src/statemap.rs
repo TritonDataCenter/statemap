@@ -142,6 +142,7 @@ pub struct Statemap {
     tags: HashMap<(u32, String), (Value, usize)>, // tags, if any
     begin: u64,                             // begin time, as ns since epoch
     end: u64,                               // end time, as ns since epoch
+    last: u64,                              // last time seen
 }
 
 #[derive(Debug)]
@@ -648,9 +649,11 @@ impl StatemapEntity {
         };
 
         let background = |x: f64, width: f64| {
-            println!(r##"<rect x="{}" y="{}" width="{}"
-                height="{}" style="fill:{}" />"##, x, y, width,
-                config.stripHeight, config.background);
+            if width > 0.0 {
+                println!(r##"<rect x="{}" y="{}" width="{}"
+                    height="{}" style="fill:{}" />"##, x, y, width,
+                    config.stripHeight, config.background);
+            }
         };
 
         let mut x: f64 = 0.0;
@@ -672,6 +675,7 @@ impl StatemapEntity {
             let rect = self.rects.get(&(map[i] as u64)).unwrap().borrow();
             let mut state = None;
             let mut blended = false;
+            let w = rect_width(&rect);
 
             x = ((map[i] - begin) as f64 /
                 globals.timeWidth as f64) * globals.pixelWidth as f64;
@@ -700,9 +704,9 @@ impl StatemapEntity {
 
                 println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                     r##"height="{}" onclick="mapclick(evt, {})" "##,
-                    r##"style="fill:{}" />"##),
-                    x, y, rect_width(&rect), config.stripHeight,
+                    r##"style="fill:{}" />"##), x, y, w, config.stripHeight,
                     data.len() - 1, colors[state.unwrap()]);
+                x += w;
 
                 continue;
             }
@@ -737,8 +741,9 @@ impl StatemapEntity {
 
             println!(concat!(r##"<rect x="{}" y="{}" width="{}" "##,
                 r##"height="{}" onclick="mapclick(evt, {})" "##,
-                r##"style="fill:{}" />"##), x, y, rect_width(&rect),
+                r##"style="fill:{}" />"##), x, y, w,
                 config.stripHeight, data.len() - 1, color);
+            x += w;
         }
 
         println!("</g>");
@@ -932,6 +937,7 @@ impl Statemap {
             tags: HashMap::new(),
             begin: 0,
             end: 0,
+            last: 0,
         }
     }
 
@@ -1275,20 +1281,12 @@ impl Statemap {
             return;
         }
 
-        /*
-         * Take a lap through all of our entities to find the one with the
-         * latest time.
-         */
-        let mut end = self.entities.values().fold(0, |latest, e| {
-            match e.start {
-                Some(start) => cmp::max(latest, start),
-                None => latest
-            }
-        });
+        let mut end = self.last;
+        let begin = self.config.begin;
 
         /*
-         * If we've been given an ending time and it's less than our last
-         * rectangle, we'll use that.
+         * If we've been given an ending time and it's less than the last
+         * rectangle for which we have state, we'll use that.
          */
         if self.config.end != 0 && self.config.end < end as i64 {
             end = self.config.end as u64;
@@ -1299,6 +1297,17 @@ impl Statemap {
         for entity in self.entities.values_mut() {
             match entity.start {
                 Some(start) if start < end => {
+                    /*
+                     * If our start time is less than our begin time then
+                     * this entity must be in a single state for our entire
+                     * specified time -- and we move our start time up to our
+                     * begin time (and assert that we have no rectangles).
+                     */
+                    if begin != 0 && (start as i64) < begin {
+                        assert!(entity.rects.is_empty());
+                        entity.start = Some(begin as u64);
+                    }
+
                     /*
                      * We are adding a rectangle, but because we are now done
                      * with ingestion, we are not updating the rectangle weight
@@ -1334,6 +1343,8 @@ impl Statemap {
             Ok(Some(datum)) => {
                 let time: u64 = datum.time;
                 let nstates: u32 = self.states.len() as u32;
+
+                self.last = time;
 
                 /*
                  * If the time of this datum is after our specified end time,
@@ -1692,8 +1703,6 @@ impl Statemap {
 
         for e in entities {
             let entity = self.entities.get(self.byid.get(e).unwrap()).unwrap();
-
-            println!("{}", e);
             data.insert(&entity.name, entity.output_svg(id,
                 self.config.begin, config, globals, &locals, &colors, y));
             y += config.stripHeight;
@@ -2156,6 +2165,7 @@ mod tests {
             }
         }
 
+        statemap.ingest_end();
         statemap
     }
 
@@ -2720,6 +2730,63 @@ mod tests {
         assert_eq!(rects[0].1, 300000 - 200001);
         assert_eq!((rects[0].2)[0], 0);
         assert_eq!((rects[0].2)[1], 300000 - 200001);
+    }
+
+    #[test]
+    fn data_begin_end_time() {
+        let mut config: Config = Default::default();
+        config.begin = 250000;
+        config.end = 310000;
+
+        let statemap = data(Some(&config), vec![
+            r##"{ "time": "100000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "200000", "entity": "foo", "state": 1 }"##,
+            r##"{ "time": "300000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "400000", "entity": "foo", "state": 1 }"##,
+            r##"{ "time": "500000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "600000", "entity": "foo", "state": 1 }"##
+        ]);
+
+        statemap.verify();
+        statemap.print("Begin at 250000, end at 310000");
+
+        let rects = statemap.get_rects("foo");
+        assert_eq!(rects.len(), 2);
+        assert_eq!(rects[0].0, 250000);
+        assert_eq!(rects[0].1, 250000 - 200000);
+        assert_eq!((rects[0].2)[0], 0);
+        assert_eq!((rects[0].2)[1], 250000 - 200000);
+
+        assert_eq!(rects[1].0, 300000);
+        assert_eq!(rects[1].1, 310000 - 300000);
+        assert_eq!((rects[1].2)[0], 310000 - 300000);
+        assert_eq!((rects[1].2)[1], 0);
+    }
+
+    #[test]
+    fn data_wrapped_time() {
+        let mut config: Config = Default::default();
+        config.begin = 250000;
+        config.end = 260000;
+
+        let statemap = data(Some(&config), vec![
+            r##"{ "time": "100000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "200000", "entity": "foo", "state": 1 }"##,
+            r##"{ "time": "300000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "400000", "entity": "foo", "state": 1 }"##,
+            r##"{ "time": "500000", "entity": "foo", "state": 0 }"##,
+            r##"{ "time": "600000", "entity": "foo", "state": 1 }"##
+        ]);
+
+        statemap.verify();
+        statemap.print("Begin at 250000, end at 260000");
+
+        let rects = statemap.get_rects("foo");
+        assert_eq!(rects.len(), 1);
+        assert_eq!(rects[0].0, 250000);
+        assert_eq!(rects[0].1, 260000 - 250000);
+        assert_eq!((rects[0].2)[0], 0);
+        assert_eq!((rects[0].2)[1], 260000 - 250000);
     }
 
     #[test]
