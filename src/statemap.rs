@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Joyent, Inc. and other contributors
+ * Copyright 2020 Joyent, Inc. and other contributors
  */ 
 
 extern crate memmap;
@@ -411,7 +411,7 @@ impl StatemapEntity {
     }
 
     fn subsume(&mut self, victim: u64)
-        -> ((Option<u64>, u64), (u64, u64), (u64, u64), ((Option<u64>, u64)))
+        -> ((Option<u64>, u64), (u64, u64), (u64, u64), (Option<u64>, u64))
     {
         let mut last = self.last;
         let subsumed: u64;
@@ -564,7 +564,7 @@ impl StatemapEntity {
 
     #[must_use]
     fn apply(&mut self, deltas: ((Option<u64>, u64),
-        (u64, u64), (u64, u64), ((Option<u64>, u64)))) ->
+        (u64, u64), (u64, u64), (Option<u64>, u64))) ->
         Vec<(u64, u64, Option<u64>)>
     {
         let mut updates: Vec<(u64, u64, Option<u64>)> = vec![];
@@ -695,7 +695,7 @@ impl StatemapEntity {
             if !blended {
                 assert!(state.is_some());
 
-                let mut datum = format!("{{ t: {}, s: {}", rect.start,
+                let mut datum = format!("{{ \"t\": {}, \"s\": {}", rect.start,
                     state.unwrap());
 
                 output_tags(&rect, &mut datum);
@@ -941,7 +941,7 @@ impl Statemap {
         }
     }
 
-    fn err<T>(&self, msg: &str) -> Result<T, Box<Error>>  {
+    fn err<T>(&self, msg: &str) -> Result<T, Box<dyn Error>>  {
         Err(Box::new(StatemapError::new(msg)))
     }
 
@@ -1217,7 +1217,7 @@ impl Statemap {
      * Ingest and advance `payload` past the metadata JSON object.
      */
     fn ingest_metadata(&mut self, payload: &mut &str)
-        -> Result<(), Box<Error>>
+        -> Result<(), Box<dyn Error>>
     {
         let metadata: StatemapInputMetadata = match try_parse(payload)? {
             None => return self.err("missing metadata payload"),
@@ -1336,7 +1336,7 @@ impl Statemap {
      * Ingest and advance `payload` past one JSON object datum.
      */
     fn ingest_datum(&mut self, payload: &mut &str)
-        -> Result<Ingest, Box<Error>>
+        -> Result<Ingest, Box<dyn Error>>
     {
         match try_parse::<StatemapInputDatum>(payload) {
             Ok(None) => return Ok(Ingest::EndOfFile),
@@ -1500,7 +1500,7 @@ impl Statemap {
         self.err("unrecognized payload")
     }
 
-    pub fn ingest(&mut self, filename: &str) -> Result<(), Box<Error>> {
+    pub fn ingest(&mut self, filename: &str) -> Result<(), Box<dyn Error>> {
         let file = File::open(filename)?;
         let mut nrecs = 0;
 
@@ -1624,14 +1624,14 @@ impl Statemap {
 
     fn output_svg(&self, id: usize, config: &StatemapSVGConfig,
         globals: &StatemapSVGGlobals,
-        colors: &Vec<StatemapColor>) -> Result<(), Box<Error>>
+        colors: &Vec<StatemapColor>) -> Result<(), Box<dyn Error>>
     {
         let output_data = |data: &HashMap<&String, Vec<String>>| {
-            println!("data: {{ ");
+            println!("\"data\": {{ ");
             let mut comma = "";
 
             for entity in data.keys() {
-                println!("{}{}: [", comma, entity);
+                println!("{}\"{}\": [", comma, entity);
 
                 let datum = data.get(entity).unwrap();
 
@@ -1832,7 +1832,7 @@ impl<'a> StatemapSVG<'a> {
     }
 
     pub fn output(&self, statemaps: &Vec<Statemap>) ->
-        Result<(), Box<Error>>
+        Result<(), Box<dyn Error>>
     {
         struct Props {
             x: u32,
